@@ -51,7 +51,7 @@ int median(int a, int b, int c, int d, int e){
    return c; 
 }
 
-int ultrasound_measurments(){
+int ultrasonic_measurments(){
 
     currentValue_ultrasonicLeft = ultrasonicLeft.read(CM); 
     currentValue_ultrasonicMiddle = ultrasonicMiddle.read(CM); 
