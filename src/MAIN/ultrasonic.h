@@ -32,7 +32,7 @@ void rollingValue(){
     ultrasonicLeftArray[0] = currentValue_ultrasonicLeft;
     ultrasonicMiddleArray[0] = currentValue_ultrasonicMiddle; 
     ultrasonicRightArray[0] = currentValue_ultrasonicRight; 
-     
+    
 }
 
 // this funcion swapp a value, if in comparation a value is bigger than another, their position is swapped in the array
@@ -59,16 +59,27 @@ int ultrasonic_measurments(){
 
     // if the sensor reading is diferente by 5 centimeters from the last value, que can consider that trash, and replace with the median
     // the value 5 is arbitrarily
-    if ((currentValue_ultrasonicLeft > ultrasonicLeftArray[0] + 5) || (currentValue_ultrasonicLeft < ultrasonicLeftArray[0] - 5)){
+    if ((currentValue_ultrasonicLeft > ultrasonicLeftArray[0] + 0.5) || (currentValue_ultrasonicLeft < ultrasonicLeftArray[0] - 0.5)){
         currentValue_ultrasonicLeft = median(ultrasonicLeftArray[0], ultrasonicLeftArray[1], ultrasonicLeftArray[2], 
                                              ultrasonicLeftArray[3], ultrasonicLeftArray[4]); 
+    }
+
+    if ((currentValue_ultrasonicMiddle > ultrasonicMiddleArray[0] + 0.5) || (currentValue_ultrasonicMiddle < ultrasonicMiddleArray[0] - 0.5)){
         
         currentValue_ultrasonicMiddle = median(ultrasonicMiddleArray[0], ultrasonicMiddleArray[1], ultrasonicMiddleArray[2],
                                                ultrasonicMiddleArray[3], ultrasonicMiddleArray[4]); 
+    }
+
+    if ((currentValue_ultrasonicRight > ultrasonicRightArray[0] + 0.5) || (currentValue_ultrasonicRight < ultrasonicRightArray[0] - 0.5)){
 
         currentValue_ultrasonicRight = median(ultrasonicRightArray[0], ultrasonicRightArray[1], ultrasonicRightArray[2],
                                               ultrasonicRightArray[3], ultrasonicRightArray[4]); 
     }
+
+    Serial.println(currentValue_ultrasonicLeft);
+    Serial.print("\n"); 
+    Serial.println(ultrasonicLeft.read(CM));
+    Serial.print("\n"); 
 
     // update array of sensor values
     rollingValue();

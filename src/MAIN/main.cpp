@@ -1,28 +1,27 @@
 #include <MAIN/config.h>
 #include <MAIN/ultrasonic.h>
-#include <MAIN/laser.h>
 
 float ultrasonicLeft_measure; 
 float ultrasonicMiddle_measure; 
 float ultrasonicRight_measure; 
-
-float LaserLeft_measure; 
-float LaserRight_measure; 
 
 void setup(){
 
   pinMode(LED_BUILD_IN,OUTPUT);
   digitalWrite(LED_BUILD_IN,HIGH);
 
-  laser_init();
-
   Serial.begin(9600);
+
+  ultrasonicLeftArray[0] = ultrasonicLeft.read(CM); 
+  ultrasonicMiddleArray[0] = ultrasonicMiddle.read(CM); 
+  ultrasonicRightArray[0] = ultrasonicRight.read(CM);
 }
 
 void loop(){
+
   ultrasonicLeft_measure, ultrasonicMiddle_measure, ultrasonicRight_measure = ultrasonic_measurments(); 
 
-  LaserLeft_measure, LaserRight_measure = laser_measurments();
+  //LaserLeft_measure, LaserRight_measure = laser_measurments();
 
   /*
   // conversion to meters
@@ -31,5 +30,5 @@ void loop(){
   ultrasonicRight_measure = ultrasonicRight_measure/10; 
   */
 
-  Serial.println(ultrasonicLeft_measure); 
+  //Serial.println(ultrasonicLeft_measure); 
 }
