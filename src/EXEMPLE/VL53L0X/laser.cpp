@@ -1,18 +1,6 @@
 #include <MAIN/config.h>
 #include "Adafruit_VL53L0X.h"
 
-
-/*
-------------------   ------------------   ------------------
-|  HC-SR04 (1)   |   |  HC-SR04 (2)   |   |  HC-SR04 (3)   |
-------------------   ------------------   ------------------
-|  VCC   |  +5V  |   |  VCC   |  +5V  |   |  VCC   |  +5V  |
-|  GND   |  GND  |   |  GND   |  GND  |   |  GND   |  GND  |
-|  TRIG  |  D25  |   |  TRIG  |  D27  |   |  TRIG  |  D12  |
-|  ECHO  |  D36  |   |  ECHO  |  D34  |   |  ECHO  |  D32  |
-
-*/
-
 // address we will assign if dual sensor is present
 #define LASER1_ADDRESS 0x30
 #define LASER2_ADDRESS 0x31

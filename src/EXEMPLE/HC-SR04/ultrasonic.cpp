@@ -1,6 +1,18 @@
 #include <MAIN/config.h>
 #include <Ultrasonic.h>
 
+/*
+------------------   ------------------   ------------------
+|  HC-SR04 (1)   |   |  HC-SR04 (2)   |   |  HC-SR04 (3)   |
+------------------   ------------------   ------------------
+|  VCC   |  +5V  |   |  VCC   |  +5V  |   |  VCC   |  +5V  |
+|  GND   |  GND  |   |  GND   |  GND  |   |  GND   |  GND  |
+|  TRIG  |  D25  |   |  TRIG  |  D27  |   |  TRIG  |  D12  |
+|  ECHO  |  D36  |   |  ECHO  |  D34  |   |  ECHO  |  D32  |
+
+*/
+
+
 // objects for the hc-sr04
 Ultrasonic ultrasonic1(TRIG_1, ECHO_1); 
 Ultrasonic ultrasonic2(TRIG_2, ECHO_2); 
