@@ -15,10 +15,11 @@ int currentValue_ultrasonicLeft;
 int currentValue_ultrasonicMiddle; 
 int currentValue_ultrasonicRight; 
 
-// swap two variables
-int temp;
-#define swap(w, z) temp = w; w = z; z = temp;
-#define sort(x, y) if(x < y) { swap(x, y); }
+int sum_ultrasonicLeft;
+int sum_ultrasonicMiddle;
+int sum_ultrasonicRight;
+
+
 
 // funcion to to shift each value on the array so that the new data can slot into position 0
 void rollingValue(){
@@ -37,52 +38,40 @@ void rollingValue(){
 
 // this funcion swapp a value, if in comparation a value is bigger than another, their position is swapped in the array
 // comparing all the values, we can get the median value of the array
-int median(int a, int b, int c, int d, int e){
+void media_movel(){
+    
+    for (int i = 0; i < 5; i++){
+        sum_ultrasonicLeft = sum_ultrasonicLeft + ultrasonicLeftArray[i];
+        sum_ultrasonicMiddle = sum_ultrasonicMiddle + ultrasonicMiddleArray[i]; 
+        sum_ultrasonicRight = sum_ultrasonicRight + ultrasonicRightArray[i];
+    }
 
-   sort(a,b);
-   sort(d,e);
-   sort(a,c);
-   sort(b,c);
-   sort(a,d);
-   sort(c,d);
-   sort(b,e);
-   sort(b,c);
-
-   return c; 
+    sum_ultrasonicLeft = sum_ultrasonicLeft/5; 
+    sum_ultrasonicMiddle = sum_ultrasonicMiddle/5;
+    sum_ultrasonicRight = sum_ultrasonicRight/5;
+ 
 }
 
 int ultrasonic_measurments(){
 
     currentValue_ultrasonicLeft = ultrasonicLeft.read(CM); 
     currentValue_ultrasonicMiddle = ultrasonicMiddle.read(CM); 
-    currentValue_ultrasonicRight = ultrasonicRight.read(CM); 
+    currentValue_ultrasonicRight = ultrasonicRight.read(CM);
 
-    // if the sensor reading is diferente by 5 centimeters from the last value, que can consider that trash, and replace with the median
-    // the value 5 is arbitrarily
-    if ((currentValue_ultrasonicLeft > ultrasonicLeftArray[0] + 0.5) || (currentValue_ultrasonicLeft < ultrasonicLeftArray[0] - 0.5)){
-        currentValue_ultrasonicLeft = median(ultrasonicLeftArray[0], ultrasonicLeftArray[1], ultrasonicLeftArray[2], 
-                                             ultrasonicLeftArray[3], ultrasonicLeftArray[4]); 
-    }
+    sum_ultrasonicLeft = 0; 
+    sum_ultrasonicMiddle = 0; 
+    sum_ultrasonicRight = 0; 
 
-    if ((currentValue_ultrasonicMiddle > ultrasonicMiddleArray[0] + 0.5) || (currentValue_ultrasonicMiddle < ultrasonicMiddleArray[0] - 0.5)){
-        
-        currentValue_ultrasonicMiddle = median(ultrasonicMiddleArray[0], ultrasonicMiddleArray[1], ultrasonicMiddleArray[2],
-                                               ultrasonicMiddleArray[3], ultrasonicMiddleArray[4]); 
-    }
-
-    if ((currentValue_ultrasonicRight > ultrasonicRightArray[0] + 0.5) || (currentValue_ultrasonicRight < ultrasonicRightArray[0] - 0.5)){
-
-        currentValue_ultrasonicRight = median(ultrasonicRightArray[0], ultrasonicRightArray[1], ultrasonicRightArray[2],
-                                              ultrasonicRightArray[3], ultrasonicRightArray[4]); 
-    }
-
-    Serial.println(currentValue_ultrasonicLeft);
-    Serial.print("\n"); 
-    Serial.println(ultrasonicLeft.read(CM));
-    Serial.print("\n"); 
-
-    // update array of sensor values
+    media_movel();
+   
     rollingValue();
+
+    Serial.println(sum_ultrasonicLeft);
+    // Serial.print(" | ");
+    // Serial.print(sum_ultrasonicMiddle); 
+    // Serial.print(" | ");
+    // Serial.print(sum_ultrasonicRight); 
+    // Serial.println("");
 
     return currentValue_ultrasonicLeft, currentValue_ultrasonicMiddle, currentValue_ultrasonicRight;
 }
