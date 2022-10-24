@@ -18,10 +18,9 @@ int laserRightArray[5];
 int currentValue_laserLeft;
 int currentValue_laserRight; 
 
-// swap two variables
-int temp;
-#define swap(w, z) temp = w; w = z; z = temp;
-#define sort(x, y) if(x < y) { swap(x, y); }
+int sum_laserLeft;
+int sum_laserMiddle;
+int sum_laserRight;
 
 void setID() {
 
@@ -55,20 +54,17 @@ void rollingValue(){
      
 }
 
-// this funcion swapp a value, if in comparation a value is bigger than another, their position is swapped in the array
-// comparing all the values, we can get the median value of the array
-int median(int a, int b, int c, int d, int e){
+// calculate the sample moving average
+void moving_average(){
+    
+    for (int i = 0; i < 5; i++){
+        sum_laserLeft = sum_laserLeft + laserLeftArray[i];
+        sum_laserRight = sum_laserRight + laserRightArray[i];
+    }
 
-   sort(a,b);
-   sort(d,e);
-   sort(a,c);
-   sort(b,c);
-   sort(a,d);
-   sort(c,d);
-   sort(b,e);
-   sort(b,c);
-
-   return c; 
+    sum_laserLeft = sum_laserLeft/5; 
+    sum_laserRight = sum_laserRight/5;
+ 
 }
 
 void laser_init() {
@@ -87,20 +83,19 @@ int laser_measurments(){
     currentValue_laserLeft = laserLeft_measure.RangeMilliMeter; 
     currentValue_laserRight = laserRight_measure.RangeMilliMeter; 
 
-    // if the sensor reading is diferente by 5 centimeters from the last value, que can consider that trash, and replace with the median
-    // the value 5 is arbitrarily
-    if ((currentValue_laserLeft > laserLeftArray[0] + 5) || (currentValue_laserLeft < laserLeftArray[0] - 5)){
-        currentValue_laserLeft = median(laserLeftArray[0], laserLeftArray[1], laserLeftArray[2], 
-                                             laserLeftArray[3], laserLeftArray[4]); 
+    sum_laserLeft = 0; 
+    sum_laserRight = 0;
 
-        currentValue_laserRight = median(laserRightArray[0], laserRightArray[1], laserRightArray[2],
-                                              laserRightArray[3], laserRightArray[4]); 
-    }
+    moving_average(); 
 
     // update array of sensor values
     rollingValue();
 
-    return currentValue_laserLeft, currentValue_laserRight;
+    Serial.print(sum_laserLeft);
+    Serial.print(" | ");
+    Serial.print(sum_laserRight); 
+    Serial.println("");
+
 }
 
 

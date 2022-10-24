@@ -36,9 +36,8 @@ void rollingValue(){
     
 }
 
-// this funcion swapp a value, if in comparation a value is bigger than another, their position is swapped in the array
-// comparing all the values, we can get the median value of the array
-void media_movel(){
+// calculate the sample moving average
+void moving_average(){
     
     for (int i = 0; i < 5; i++){
         sum_ultrasonicLeft = sum_ultrasonicLeft + ultrasonicLeftArray[i];
@@ -62,7 +61,7 @@ int ultrasonic_measurments(){
     sum_ultrasonicMiddle = 0; 
     sum_ultrasonicRight = 0; 
 
-    media_movel();
+    moving_average();
    
     rollingValue();
 

@@ -1,5 +1,6 @@
 #include <MAIN/config.h>
-#include <MAIN/ultrasonic.h>
+//#include <MAIN/ultrasonic.h>
+#include <MAIN/laser.h>
 
 float ultrasonicLeft_measure; 
 float ultrasonicMiddle_measure; 
@@ -12,14 +13,16 @@ void setup(){
 
   Serial.begin(9600);
 
-  ultrasonicLeftArray[0] = ultrasonicLeft.read(CM); 
-  ultrasonicMiddleArray[0] = ultrasonicMiddle.read(CM); 
-  ultrasonicRightArray[0] = ultrasonicRight.read(CM);
+  //ultrasonicLeftArray[0] = ultrasonicLeft.read(CM); 
+  //ultrasonicMiddleArray[0] = ultrasonicMiddle.read(CM); 
+  //ultrasonicRightArray[0] = ultrasonicRight.read(CM);
+
+  laser_init(); 
 }
 
 void loop(){
 
-  ultrasonicLeft_measure, ultrasonicMiddle_measure, ultrasonicRight_measure = ultrasonic_measurments(); 
+  //ultrasonicLeft_measure, ultrasonicMiddle_measure, ultrasonicRight_measure = ultrasonic_measurments(); 
 
   //LaserLeft_measure, LaserRight_measure = laser_measurments();
 
@@ -31,4 +34,6 @@ void loop(){
   */
 
   //Serial.println(ultrasonicLeft_measure); 
+
+  laser_measurments();
 }
