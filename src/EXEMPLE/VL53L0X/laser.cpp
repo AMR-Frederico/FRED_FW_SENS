@@ -1,107 +1,131 @@
-#include <MAIN/config.h>
-#include "Adafruit_VL53L0X.h"
+#include <Adafruit_VL53L0X.h>
+#include <Arduino.h>
 
-// address we will assign if dual sensor is present
-#define LASER1_ADDRESS 0x30
-#define LASER2_ADDRESS 0x31
 
-// objects for the vl53l0x
-Adafruit_VL53L0X laser1 = Adafruit_VL53L0X();
-Adafruit_VL53L0X laser2 = Adafruit_VL53L0X();
 
-// this holds the measurement
-VL53L0X_RangingMeasurementData_t measure1;
-VL53L0X_RangingMeasurementData_t measure2;
+// Define which Wire objects to use, may depend on platform
+// or on your configurations.
+#define SENSOR1_WIRE Wire
+#define SENSOR2_WIRE Wire
 
-/*
-    Reset all sensors by setting all of their XSHUT pins low for delay(10), then set all XSHUT high to bring out of reset
-    Keep sensor #1 awake by keeping XSHUT pin high
-    Put all other sensors into shutdown by pulling XSHUT pins low
-    Initialize sensor #1 with lox.begin(new_i2c_address) Pick any number but 0x29 and it must be under 0x7F. Going with 0x30 to 0x3F is probably OK.
-    Keep sensor #1 awake, and now bring sensor #2 out of reset by setting its XSHUT pin high.
-    Initialize sensor #2 with lox.begin(new_i2c_address) Pick any number but 0x29 and whatever you set the first sensor to
- */
 
-void setID() {
 
-  digitalWrite(XSHUNT_1, LOW);    
-  digitalWrite(XSHUNT_2, LOW);
+typedef struct {
+  Adafruit_VL53L0X *psensor; // pointer to object
+  TwoWire *pwire;
+  int id;            // id for the sensor
+  int shutdown_pin;  // which pin for shutdown;
+  int interrupt_pin; // which pin to use for interrupts.
+  Adafruit_VL53L0X::VL53L0X_Sense_config_t
+      sensor_config;     // options for how to use the sensor
+  uint16_t range;        // range value used in continuous mode stuff.
+  uint8_t sensor_status; // status from last ranging in continuous.
+} sensorList_t;
+
+// Actual object, could probably include in structure above61
+Adafruit_VL53L0X sensor1;
+Adafruit_VL53L0X sensor2;
+
+
+// Setup for 4 sensors
+sensorList_t sensors[] = {
+
+    {&sensor1, &SENSOR1_WIRE, 0x30, 18, 1,
+    Adafruit_VL53L0X::VL53L0X_SENSE_DEFAULT, 0, 0},
+    {&sensor2, &SENSOR2_WIRE, 0x29, 19, 1,
+     Adafruit_VL53L0X::VL53L0X_SENSE_DEFAULT, 0, 0},
+    
+
+};
+
+const int COUNT_SENSORS = sizeof(sensors) / sizeof(sensors[0]);
+
+const uint16_t ALL_SENSORS_PENDING = ((1 << COUNT_SENSORS) - 1);
+uint16_t sensors_pending = ALL_SENSORS_PENDING;
+uint32_t sensor_last_cycle_time;
+
+void Initialize_sensors() {
+  bool found_any_sensors = false;
+  // Set all shutdown pins low to shutdown sensors
+  for (int i = 0; i < COUNT_SENSORS; i++)
+    digitalWrite(sensors[i].shutdown_pin, LOW);
   delay(10);
-  
-  digitalWrite(XSHUNT_1, HIGH);
-  digitalWrite(XSHUNT_2, HIGH);
-  delay(10);
 
-  digitalWrite(XSHUNT_1, HIGH);
-  digitalWrite(XSHUNT_2, LOW);
-
-  // initing LOX1
-  if(!laser1.begin(LASER1_ADDRESS)) {
-    Serial.println(F("Failed to boot first VL53L0X"));
-    while(1);
+  for (int i = 0; i < COUNT_SENSORS; i++) {
+    // one by one enable sensors and set their ID
+    digitalWrite(sensors[i].shutdown_pin, HIGH);
+    delay(10); // give time to wake up.
+    if (sensors[i].psensor->begin(sensors[i].id, false, sensors[i].pwire,
+                                  sensors[i].sensor_config)) {
+      found_any_sensors = true;
+    } else {
+      Serial.print(i, DEC);
+      Serial.print(F(": failed to start\n"));
+    }
   }
-  delay(10);
-
-  digitalWrite(XSHUNT_2, HIGH);
-  delay(10);
-
-  //initing LOX2
-  if(!laser2.begin(LASER2_ADDRESS)) {
-    Serial.println(F("Failed to boot second VL53L0X"));
-    while(1);
+  if (!found_any_sensors) {
+    Serial.println("No valid sensors found");
+    while (1)
+      ;
   }
 }
+//====================================================================
+// Simple Sync read sensors.
+//====================================================================
+void read_sensors() {
 
-void read_dual_sensors() {
-  
-  laser1.rangingTest(&measure1, false); // pass in 'true' to get debug data printout!
-  laser2.rangingTest(&measure2, false); // pass in 'true' to get debug data printout!
+  uint16_t ranges_mm[COUNT_SENSORS];
+  uint32_t stop_times[COUNT_SENSORS];
 
-  // print sensor one reading
-  Serial.print(F("1: "));
-  if(measure1.RangeStatus != 4) {     // if not out of range
-    Serial.print(measure1.RangeMilliMeter);
-  } else {
-    Serial.print(F("Out of range"));
+  uint32_t start_time = millis();
+  for (int i = 0; i < COUNT_SENSORS; i++) {
+    ranges_mm[i] = sensors[i].psensor->readRange();
+    stop_times[i] = millis();
   }
-  
-  Serial.print(F(" "));
+  uint32_t delta_time = millis() - start_time;
 
-  // print sensor two reading
-  Serial.print(F("2: "));
-  if(measure2.RangeStatus != 4) {
-    Serial.print(measure2.RangeMilliMeter);
-  } else {
-    Serial.print(F("Out of range"));
+
+  Serial.print(delta_time, DEC);
+  Serial.print(F(" | "));
+  for (int i = 0; i < COUNT_SENSORS; i++) {
+
+    Serial.print(ranges_mm[i], DEC);
+    Serial.print(F(" "));
+   
+    
+    start_time = stop_times[i];
   }
-  
   Serial.println();
 }
 
+
+//====================================================================
+// Setup
+//====================================================================
 void setup() {
   Serial.begin(115200);
+  Wire.begin();
 
-  // wait until serial port opens for native USB devices
-  while (! Serial) { delay(1); }
+  // wait until serial port opens ... For 5 seconds max
+  while (!Serial && millis() < 5000)
+    ;
 
-  pinMode(XSHUNT_1, OUTPUT);
-  pinMode(XSHUNT_2, OUTPUT);
+  // initialize all of the pins.
+  Serial.println(F("VL53LOX_multi start, initialize IO pins"));
+  for (int i = 0; i < COUNT_SENSORS; i++) {
+    pinMode(sensors[i].shutdown_pin, OUTPUT);
+    digitalWrite(sensors[i].shutdown_pin, LOW);
 
-  Serial.println(F("Shutdown pins inited..."));
-
-  digitalWrite(XSHUNT_1, LOW);
-  digitalWrite(XSHUNT_2, LOW);
-
-  Serial.println(F("Both in reset mode...(pins are low)"));
-  
-  
+  }
   Serial.println(F("Starting..."));
-  setID();
- 
+  Initialize_sensors();
 }
 
+//====================================================================
+// loop
+//====================================================================
 void loop() {
-   
-  read_dual_sensors();
-  delay(100);
+ 
+    read_sensors();
+    
 }

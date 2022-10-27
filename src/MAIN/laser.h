@@ -78,7 +78,7 @@ void laser_init() {
   setID();
 }
 
-int laser_measurments(){
+void laser_measurments(){
 
     currentValue_laserLeft = laserLeft_measure.RangeMilliMeter; 
     currentValue_laserRight = laserRight_measure.RangeMilliMeter; 
