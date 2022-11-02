@@ -59,40 +59,40 @@ void ros_init(){
     // -------- static fields of the ULTRASONIC SENSOR messages 
     ultrasonicLeftMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
     ultrasonicLeftMsg.header.frame_id = "map"; 
-    ultrasonicLeftMsg.field_of_view = 0.26;        // field of view -> 15° or 0.26 radians 
-    ultrasonicLeftMsg.min_range = 0.05;            // minimum  distance of detection in meters
-    ultrasonicLeftMsg.max_range = 4;               // maximum  distance of detection in meters 
+    ultrasonicLeftMsg.field_of_view = ULTRASONIC_FIELD_OF_VIEW;        
+    ultrasonicLeftMsg.min_range = ULTRASONIC_MIN_RANGE;            
+    ultrasonicLeftMsg.max_range = ULTRASONIC_MAX_RANGE;               
 
     ultrasonicMiddleMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
     ultrasonicMiddleMsg.header.frame_id = "map"; 
-    ultrasonicMiddleMsg.field_of_view = 0.26; 
-    ultrasonicMiddleMsg.min_range = 0.05;
-    ultrasonicMiddleMsg.max_range = 4; 
+    ultrasonicMiddleMsg.field_of_view = ULTRASONIC_FIELD_OF_VIEW; 
+    ultrasonicMiddleMsg.min_range = ULTRASONIC_MIN_RANGE;
+    ultrasonicMiddleMsg.max_range = ULTRASONIC_MAX_RANGE; 
 
     ultrasonicRightMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
     ultrasonicRightMsg.header.frame_id = "map"; 
-    ultrasonicRightMsg.field_of_view = 0.26; 
-    ultrasonicRightMsg.min_range = 0.05; 
-    ultrasonicRightMsg.max_range = 4; 
+    ultrasonicRightMsg.field_of_view = ULTRASONIC_FIELD_OF_VIEW; 
+    ultrasonicRightMsg.min_range = ULTRASONIC_MIN_RANGE; 
+    ultrasonicRightMsg.max_range = ULTRASONIC_MAX_RANGE; 
 
     // -------- static fields of the LASER SENSOR messages 
     laserLeftMsg.radiation_type = sensor_msgs::Range::INFRARED; 
     laserLeftMsg.header.frame_id = "map"; 
-    laserLeftMsg.field_of_view = 0.44;        // field of view -> 25° or 0.44 radians  
-    laserLeftMsg.min_range = 0.01; 
-    laserLeftMsg.max_range = 2; 
+    laserLeftMsg.field_of_view = LASER_FIELD_OF_VIEW;         
+    laserLeftMsg.min_range = LASER_MIN_RANGE; 
+    laserLeftMsg.max_range = LASER_MAX_RANGE; 
 
     laserRightMsg.radiation_type = sensor_msgs::Range::INFRARED; 
     laserRightMsg.header.frame_id = "map"; 
-    laserRightMsg.field_of_view = 0.44; 
-    laserRightMsg.min_range = 0.01; 
-    laserRightMsg.max_range = 2; 
+    laserRightMsg.field_of_view = LASER_FIELD_OF_VIEW; 
+    laserRightMsg.min_range = LASER_MIN_RANGE; 
+    laserRightMsg.max_range = LASER_MAX_RANGE; 
 
 }
 
 void ros_loop(){
 
-    // ULTRASOUND SENSOR 
+/*     // ** ULTRASOUND SENSOR 
     ultrasonicLeftMsg.header.stamp = nh.now(); 
     ultrasonicLeftMsg.range = ultrasonicLeftMeasure;
     pub_ultrasonicLeft.publish(&ultrasonicLeftMsg); 
@@ -105,7 +105,7 @@ void ros_loop(){
     ultrasonicRightMsg.range = ultrasonicRightMeasure;
     pub_ultrasonicRight.publish(&ultrasonicRightMsg);  
 
-    // LASER SENSOR
+    // ** LASER SENSOR
     laserLeftMsg.header.stamp = nh.now(); 
     laserLeftMsg.range = laserLeftMeasure;
     pub_laserLeft.publish(&laserLeftMsg); 
@@ -114,6 +114,6 @@ void ros_loop(){
     laserRightMsg.range = laserRightMeasure; 
     pub_laserRight.publish(&laserRightMsg); 
 
-    nh.spinOnce();
+    nh.spinOnce(); */
 
 }
