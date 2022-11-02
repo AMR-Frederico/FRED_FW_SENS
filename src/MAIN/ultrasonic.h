@@ -1,10 +1,19 @@
 #include <MAIN/config.h>
 #include <Ultrasonic.h> 
+#include "filter.h"
 
 // objects for the hc-sr04
 Ultrasonic ultrasonicLeft(TRIG_1, ECHO_1); 
 Ultrasonic ultrasonicMiddle(TRIG_2, ECHO_2); 
 Ultrasonic ultrasonicRight(TRIG_3, ECHO_3); 
+
+MedianFilter LeftUltrasonicFilter(10,0);
+MedianFilter MiddleUltrasonicFilter(10,0);
+MedianFilter RightUltrasonicFilter(10,0);
+
+Kalman LeftKalmanFilter();
+Kalman MiddleKalmanFilter();
+Kalman RightKalmanFilter();
 
 // array of the most recent 5 sensor values
 int ultrasonicLeftArray[5];
@@ -65,6 +74,10 @@ int ultrasonic_measurments(){
    
     rollingValue();
 
+    LeftUltrasonicFilter.in(currentValue_ultrasonicLeft);
+    MiddleUltrasonicFilter.in(currentValue_ultrasonicMiddle);
+    RightUltrasonicFilter.in(currentValue_ultrasonicRight);
+
     Serial.println(sum_ultrasonicLeft);
     // Serial.print(" | ");
     // Serial.print(sum_ultrasonicMiddle); 
@@ -72,5 +85,21 @@ int ultrasonic_measurments(){
     // Serial.print(sum_ultrasonicRight); 
     // Serial.println("");
 
+    //Para testes do filtro de mediana
+    Serial.print(LeftUltrasonicFilter.out());
+    Serial.print(" | ");
+    Serial.print(MiddleUltrasonicFilter.out());
+    Serial.print(" | ");
+    Serial.print(RightUltrasonicFilter.out()); 
+    Serial.println("");
+
+    //Para testes do filtro de kalman
+    Serial.print(LeftKalmanFilter.filter(currentValue_ultrasonicLeft));
+    Serial.print(" | ");
+    Serial.print(MiddleKalmanFilter.filter(currentValue_ultrasonicMiddle));
+    Serial.print(" | ");
+    Serial.print(RightKalmanFilter.filter(currentValue_ultrasonicRight)); 
+    Serial.println("");
+    
     return currentValue_ultrasonicLeft, currentValue_ultrasonicMiddle, currentValue_ultrasonicRight;
 }
