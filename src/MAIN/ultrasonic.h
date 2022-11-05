@@ -71,14 +71,15 @@ int ultrasonic_measurments(){
     sum_ultrasonicRight = 0; 
 
     moving_average();
+    sum_ultrasonicRight = moving_average_filter(ultrasonicRightArray, 5);
    
     rollingValue();
 
-    LeftUltrasonicFilter.in(currentValue_ultrasonicLeft);
-    MiddleUltrasonicFilter.in(currentValue_ultrasonicMiddle);
-    RightUltrasonicFilter.in(currentValue_ultrasonicRight);
+    LeftUltrasonicFilter.in((int)currentValue_ultrasonicLeft);
+    MiddleUltrasonicFilter.in((int)currentValue_ultrasonicMiddle);
+    RightUltrasonicFilter.in((int)currentValue_ultrasonicRight);
 
-    Serial.println(sum_ultrasonicLeft);
+    // Serial.println(sum_ultrasonicLeft);
     // Serial.print(" | ");
     // Serial.print(sum_ultrasonicMiddle); 
     // Serial.print(" | ");
@@ -94,12 +95,12 @@ int ultrasonic_measurments(){
     Serial.println("");
 
     //Para testes do filtro de kalman
-    Serial.print(LeftKalmanFilter.filter(currentValue_ultrasonicLeft));
-    Serial.print(" | ");
-    Serial.print(MiddleKalmanFilter.filter(currentValue_ultrasonicMiddle));
-    Serial.print(" | ");
-    Serial.print(RightKalmanFilter.filter(currentValue_ultrasonicRight)); 
-    Serial.println("");
+    // Serial.print(LeftKalmanFilter.filter(currentValue_ultrasonicLeft));
+    // Serial.print(" | ");
+    // Serial.print(MiddleKalmanFilter.filter(currentValue_ultrasonicMiddle));
+    // Serial.print(" | ");
+    // Serial.print(RightKalmanFilter.filter(currentValue_ultrasonicRight)); 
+    // Serial.println("");
     
     return currentValue_ultrasonicLeft, currentValue_ultrasonicMiddle, currentValue_ultrasonicRight;
 }

@@ -32,6 +32,15 @@ int Kalman::filter(int U)
   return U_hat;
 }
 
+int moving_average_filter(int *vector, int size){
+    int return_value = 0;
+    for (int i = 0; i < size; i++){
+        return_value = return_value + vector[i];
+    }
+
+    return_value = return_value/size; 
+    return return_value;
+}
 
 /*long filtered_ultradist(long time)
 {

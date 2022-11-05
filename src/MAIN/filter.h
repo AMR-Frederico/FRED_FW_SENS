@@ -15,7 +15,7 @@ class Kalman
         static int Q;
         static int P;
     };
-
+int moving_average_filter(int *vector, int size);
 long filtered_ultradist (long time, long distance);
 
 
