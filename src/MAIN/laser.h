@@ -1,9 +1,14 @@
 #include <MAIN/config.h>
 #include "Adafruit_VL53L0X.h"
+#include "filter.h"
 
 // address we will assign if dual sensor is present
 #define LASER1_ADDRESS 0x30
 #define LASER2_ADDRESS 0x31
+
+//Filtros de mediana para testes 
+MedianFilter LeftLaserFilter(10,0);
+MedianFilter RightLaserFilter(10,0);
 
 Adafruit_VL53L0X laserLeft = Adafruit_VL53L0X();
 Adafruit_VL53L0X laserRight = Adafruit_VL53L0X();
@@ -91,9 +96,18 @@ void laser_measurments(){
     // update array of sensor values
     rollingValue();
 
+    //Para testes do filtro de mediana
+    LeftLaserFilter.in(currentValue_laserLeft);
+    RightLaserFilter.in(currentValue_laserRight);
+    
     Serial.print(sum_laserLeft);
     Serial.print(" | ");
     Serial.print(sum_laserRight); 
+    Serial.println("");
+
+    Serial.print(LeftLaserFilter.out());
+    Serial.print(" | ");
+    Serial.print(RightLaserFilter.out()); 
     Serial.println("");
 
 }

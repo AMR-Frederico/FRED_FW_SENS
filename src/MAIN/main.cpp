@@ -1,5 +1,6 @@
 #include <MAIN/config.h>
 //#include <MAIN/ultrasonic.h>
+#include "filter.h"
 #include <MAIN/laser.h>
 
 float ultrasonicLeft_measure; 
