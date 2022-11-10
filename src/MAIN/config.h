@@ -1,8 +1,13 @@
 #include <Arduino.h>
 
+// ------------- FILTERS CONFIGURATIONS 
+#define NUMBER_SAMPLES 5
 
 
-// pins of the ULTRASONIC sensor (hc-sr04)
+// -------------- ULTRASONIC CONFIG 
+#define NUMBER_ULTRASONIC_SENSORS 3
+#define ULTRASONIC_MAX_RANGE 400    // value in centimeters 
+
 #define ECHO_1 36
 #define TRIG_1 25
 
@@ -12,9 +17,10 @@
 #define ECHO_3 32
 #define TRIG_3 12
 
-// pins of LASER sensor (vl53l0x)
+
+// ----------- LASER CONFIG 
 #define XSHUNT_1 19
 #define XSHUNT_2 22 
 
-//debug led
+// ----------- DEBUG 
 #define  LED_BUILD_IN  2

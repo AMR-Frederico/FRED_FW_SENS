@@ -1,53 +1,49 @@
 #include <MAIN/config.h>
-#include <Ultrasonic.h> 
+#include <NewPing.h>
 #include "filter.h"
 
 // objects for the hc-sr04
-Ultrasonic ultrasonicLeft(TRIG_1, ECHO_1); 
-Ultrasonic ultrasonicMiddle(TRIG_2, ECHO_2); 
-Ultrasonic ultrasonicRight(TRIG_3, ECHO_3); 
+NewPing ultrasonic[NUMBER_ULTRASONIC_SENSORS] = {
+    NewPing(TRIG_1, ECHO_1, ULTRASONIC_MAX_RANGE), 
+    NewPing(TRIG_2, ECHO_2, ULTRASONIC_MAX_RANGE), 
+    NewPing(TRIG_3, ECHO_3, ULTRASONIC_MAX_RANGE)
+};
 
-MedianFilter LeftUltrasonicFilter(10,0);
-MedianFilter MiddleUltrasonicFilter(10,0);
-MedianFilter RightUltrasonicFilter(10,0);
+MedianFilter median_filter[NUMBER_ULTRASONIC_SENSORS] = {
+    MedianFilter(10, 0), 
+    MedianFilter(10, 0), 
+    MedianFilter(10, 0)
+}; 
 
-Kalman LeftKalmanFilter();
-Kalman MiddleKalmanFilter();
-Kalman RightKalmanFilter();
+Kalman kalman_filter[NUMBER_ULTRASONIC_SENSORS] = {
+    Kalman(),
+    Kalman(), 
+    Kalman()
+}; 
 
-// array of the most recent 5 sensor values
-int ultrasonicLeftArray[5];
-int ultrasonicMiddleArray[5]; 
-int ultrasonicRightArray[5]; 
+int ultrasonicArrays[NUMBER_SAMPLES][NUMBER_ULTRASONIC_SENSORS]; // array of the most recent sensor values
 
-int currentValue_ultrasonicLeft;
-int currentValue_ultrasonicMiddle; 
-int currentValue_ultrasonicRight; 
-
-int sum_ultrasonicLeft;
-int sum_ultrasonicMiddle;
-int sum_ultrasonicRight;
-
-
+int currentValue_ultrasonic[NUMBER_ULTRASONIC_SENSORS]; 
+int sum_ultrasonic [NUMBER_ULTRASONIC_SENSORS]; 
 
 // funcion to to shift each value on the array so that the new data can slot into position 0
 void rollingValue(){
     
-    for (int i = 4; i > 0; i--){
-        ultrasonicLeftArray[i] = ultrasonicLeftArray[i-1];
-        ultrasonicMiddleArray[i] = ultrasonicMiddleArray[i-1]; 
-        ultrasonicRightArray[i] = ultrasonicRightArray[i-1];
-    }
+    for (int j = 0; j < NUMBER_ULTRASONIC_SENSORS; j++)
+    {
+        for(int i = NUMBER_SAMPLES; i > 0; j--)
+        {
+            ultrasonicArrays[i][j] = ultrasonicArrays[i-1][j]; 
+        }
 
-    ultrasonicLeftArray[0] = currentValue_ultrasonicLeft;
-    ultrasonicMiddleArray[0] = currentValue_ultrasonicMiddle; 
-    ultrasonicRightArray[0] = currentValue_ultrasonicRight; 
-    
+        ultrasonic[0][j] = currentValue_ultrasonic[j];
+    }    
 }
 
 // calculate the sample moving average
 void moving_average(){
     
+    for 
     for (int i = 0; i < 5; i++){
         sum_ultrasonicLeft = sum_ultrasonicLeft + ultrasonicLeftArray[i];
         sum_ultrasonicMiddle = sum_ultrasonicMiddle + ultrasonicMiddleArray[i]; 
