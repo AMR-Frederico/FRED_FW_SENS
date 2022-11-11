@@ -1,7 +1,5 @@
 #include <Arduino.h>
 
-
-
 //* pins of the ULTRASONIC sensor (hc-sr04)
 #define ECHO_1 36
 #define TRIG_1 25
@@ -18,7 +16,7 @@
 
 //* pins of LASER sensor (vl53l0x)
 #define XSHUNT_1 19
-#define XSHUNT_2 22
+#define XSHUNT_2 18
 
 #define LASER_FIELD_OF_VIEW 0.44           //! value in rad
 #define LASER_MIN_RANGE 0.05               //! value in meters 
