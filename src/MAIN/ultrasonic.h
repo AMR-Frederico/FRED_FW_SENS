@@ -1,102 +1,76 @@
 #include <MAIN/config.h>
-#include <NewPing.h>
+#include <Ultrasonic.h>
 #include "filter.h"
 
 // objects for the hc-sr04
-NewPing ultrasonic[NUMBER_ULTRASONIC_SENSORS] = {
-    NewPing(TRIG_1, ECHO_1, ULTRASONIC_MAX_RANGE), 
-    NewPing(TRIG_2, ECHO_2, ULTRASONIC_MAX_RANGE), 
-    NewPing(TRIG_3, ECHO_3, ULTRASONIC_MAX_RANGE)
-};
+Ultrasonic ultrasonic[NUMBER_ULTRASONIC_SENSORS] = {
+    Ultrasonic(TRIG_1, ECHO_1, ULTRASONIC_MAX_RANGE),
+    Ultrasonic(TRIG_2, ECHO_2, ULTRASONIC_MAX_RANGE),
+    Ultrasonic(TRIG_3, ECHO_3, ULTRASONIC_MAX_RANGE)};
 
 MedianFilter median_filter[NUMBER_ULTRASONIC_SENSORS] = {
-    MedianFilter(10, 0), 
-    MedianFilter(10, 0), 
-    MedianFilter(10, 0)
-}; 
-
+    MedianFilter(NUMBER_SAMPLES, 0),
+    MedianFilter(NUMBER_SAMPLES, 0),
+    MedianFilter(NUMBER_SAMPLES, 0)};
+/* 
 Kalman kalman_filter[NUMBER_ULTRASONIC_SENSORS] = {
     Kalman(),
-    Kalman(), 
-    Kalman()
-}; 
+    Kalman(),
+    Kalman()}; */
 
 int ultrasonicArrays[NUMBER_SAMPLES][NUMBER_ULTRASONIC_SENSORS]; // array of the most recent sensor values
 
-int currentValue_ultrasonic[NUMBER_ULTRASONIC_SENSORS]; 
-int sum_ultrasonic [NUMBER_ULTRASONIC_SENSORS]; 
+int currentValue_ultrasonic[NUMBER_ULTRASONIC_SENSORS];
+int previousValue_ultrasonic[NUMBER_ULTRASONIC_SENSORS]; 
+int filtered_ultrasonic[NUMBER_ULTRASONIC_SENSORS];
+int currentSensor = 0;
+
+int movingAverage_sample[NUMBER_SAMPLES]; 
 
 // funcion to to shift each value on the array so that the new data can slot into position 0
-void rollingValue(){
-    
-    for (int j = 0; j < NUMBER_ULTRASONIC_SENSORS; j++)
+void rollingValue()
+{
+
+    for (int j = 0; j <= NUMBER_ULTRASONIC_SENSORS; j++)
     {
-        for(int i = NUMBER_SAMPLES; i > 0; j--)
+        for (int i = NUMBER_SAMPLES-1; i >= 0; i--)
         {
-            ultrasonicArrays[i][j] = ultrasonicArrays[i-1][j]; 
+            ultrasonicArrays[i][j] = ultrasonicArrays[i - 1][j];
         }
 
-        ultrasonic[0][j] = currentValue_ultrasonic[j];
-    }    
+        ultrasonicArrays[0][j] = currentValue_ultrasonic[j];
+    }
 }
 
-// calculate the sample moving average
-void moving_average(){
-    
-    for 
-    for (int i = 0; i < 5; i++){
-        sum_ultrasonicLeft = sum_ultrasonicLeft + ultrasonicLeftArray[i];
-        sum_ultrasonicMiddle = sum_ultrasonicMiddle + ultrasonicMiddleArray[i]; 
-        sum_ultrasonicRight = sum_ultrasonicRight + ultrasonicRightArray[i];
+void ultrasonic_measurments(int previousTime)
+{
+    previousValue_ultrasonic[currentSensor] = ultrasonic[currentSensor].read(); 
+
+    if (millis() - previousTime > 33 && currentSensor < NUMBER_ULTRASONIC_SENSORS) {
+        currentValue_ultrasonic[currentSensor] = ultrasonic[currentSensor].read(CM);
+        median_filter[currentSensor].in((int)currentValue_ultrasonic); 
+
+        if ((currentValue_ultrasonic[currentSensor] - previousValue_ultrasonic[currentSensor] > 1) || (currentValue_ultrasonic[currentSensor] - previousValue_ultrasonic[currentSensor] < 1)) {
+            currentValue_ultrasonic[currentSensor] = median_filter[currentSensor].out(); 
+        }
+
+        currentSensor = currentSensor + 1;  
+
+        rollingValue(); 
     }
 
-    sum_ultrasonicLeft = sum_ultrasonicLeft/5; 
-    sum_ultrasonicMiddle = sum_ultrasonicMiddle/5;
-    sum_ultrasonicRight = sum_ultrasonicRight/5;
- 
-}
+    if (currentSensor == 2) {
+        for (int j = 0; j < NUMBER_ULTRASONIC_SENSORS; j++) {
+            for (int i = 0; i < NUMBER_SAMPLES; i++) {
+                movingAverage_sample[i] = ultrasonicArrays[i][j]; 
+            }
+            
+            filtered_ultrasonic[j] = moving_average_filter(movingAverage_sample, NUMBER_SAMPLES);
 
-int ultrasonic_measurments(){
+            Serial.println(filtered_ultrasonic[j]); 
+            Serial.print(" | "); 
+        }
 
-    currentValue_ultrasonicLeft = ultrasonicLeft.read(CM); 
-    currentValue_ultrasonicMiddle = ultrasonicMiddle.read(CM); 
-    currentValue_ultrasonicRight = ultrasonicRight.read(CM);
-
-    sum_ultrasonicLeft = 0; 
-    sum_ultrasonicMiddle = 0; 
-    sum_ultrasonicRight = 0; 
-
-    moving_average();
-    sum_ultrasonicRight = moving_average_filter(ultrasonicRightArray, 5);
-   
-    rollingValue();
-
-    LeftUltrasonicFilter.in((int)currentValue_ultrasonicLeft);
-    MiddleUltrasonicFilter.in((int)currentValue_ultrasonicMiddle);
-    RightUltrasonicFilter.in((int)currentValue_ultrasonicRight);
-
-    // Serial.println(sum_ultrasonicLeft);
-    // Serial.print(" | ");
-    // Serial.print(sum_ultrasonicMiddle); 
-    // Serial.print(" | ");
-    // Serial.print(sum_ultrasonicRight); 
-    // Serial.println("");
-
-    //Para testes do filtro de mediana
-    Serial.print(LeftUltrasonicFilter.out());
-    Serial.print(" | ");
-    Serial.print(MiddleUltrasonicFilter.out());
-    Serial.print(" | ");
-    Serial.print(RightUltrasonicFilter.out()); 
-    Serial.println("");
-
-    //Para testes do filtro de kalman
-    // Serial.print(LeftKalmanFilter.filter(currentValue_ultrasonicLeft));
-    // Serial.print(" | ");
-    // Serial.print(MiddleKalmanFilter.filter(currentValue_ultrasonicMiddle));
-    // Serial.print(" | ");
-    // Serial.print(RightKalmanFilter.filter(currentValue_ultrasonicRight)); 
-    // Serial.println("");
+    }
     
-    return currentValue_ultrasonicLeft, currentValue_ultrasonicMiddle, currentValue_ultrasonicRight;
 }

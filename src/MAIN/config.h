@@ -17,6 +17,9 @@
 #define ECHO_3 32
 #define TRIG_3 12
 
+#define READING_INTERVAL 33 
+
+
 
 // ----------- LASER CONFIG 
 #define XSHUNT_1 19
