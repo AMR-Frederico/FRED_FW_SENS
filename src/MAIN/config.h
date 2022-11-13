@@ -1,6 +1,13 @@
 #include <Arduino.h>
 
-//* pins of the ULTRASONIC sensor (hc-sr04)
+// ------------- FILTERS CONFIGURATIONS 
+#define NUMBER_SAMPLES 5
+
+
+// -------------- ULTRASONIC CONFIG 
+#define NUMBER_ULTRASONIC_SENSORS 3
+#define ULTRASONIC_MAX_RANGE 400    // value in centimeters 
+
 #define ECHO_1 36
 #define TRIG_1 25
 
@@ -10,17 +17,13 @@
 #define ECHO_3 32
 #define TRIG_3 12
 
-#define ULTRASONIC_FIELD_OF_VIEW 0.26      //! value in rad 
-#define ULTRASONIC_MIN_RANGE 0.05          //! value in meters
-#define ULTRASONIC_MAX_RANGE 4             //! value in meters 
+#define READING_INTERVAL 33 
 
-//* pins of LASER sensor (vl53l0x)
+
+
+// ----------- LASER CONFIG 
 #define XSHUNT_1 19
-#define XSHUNT_2 18
-
-#define LASER_FIELD_OF_VIEW 0.44           //! value in rad
-#define LASER_MIN_RANGE 0.05               //! value in meters 
-#define LASER_MAX_RANGE 2                  //! value in meters 
+#define XSHUNT_2 22 
 
 // ----------- DEBUG 
 #define  LED_BUILD_IN  2
