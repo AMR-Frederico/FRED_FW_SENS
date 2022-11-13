@@ -27,11 +27,11 @@ void setup(){
 
 void loop(){
     Serial.print("Sensor 01 (m): ");
-    Serial.print(ultrasonic1.read(CM)/100);
+    Serial.println(ultrasonic1.read(CM));
 
     Serial.print("Sensor 02 (m): ");
-    Serial.print(ultrasonic2.read(CM)/100);
+    Serial.println(ultrasonic2.read(CM));
 
     Serial.print("Sensor 03 (m): ");
-    Serial.print(ultrasonic3.read(CM)/100);
+    Serial.println(ultrasonic3.read(CM));
 }
