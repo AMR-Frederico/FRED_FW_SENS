@@ -22,5 +22,5 @@
 #define LASER_MIN_RANGE 0.05               //! value in meters 
 #define LASER_MAX_RANGE 2                  //! value in meters 
 
-//debug led
+// ----------- DEBUG 
 #define  LED_BUILD_IN  2
