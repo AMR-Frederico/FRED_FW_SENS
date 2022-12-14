@@ -1,200 +1,359 @@
-#include <Adafruit_MPU6050.h>
-#include <Wire.h>
+// MPU6050 offset-finder, based on Jeff Rowberg's MPU6050_RAW
+// 2016-10-19 by Robert R. Fenichel (bob@fenichel.net)
 
-Adafruit_MPU6050 mpu;
-float accX, accY, accZ, gyroX, gyroY, gyroZ;
-float ax_offset = 0,  ay_offset = 0,  az_offset = 0,  gx_offset = 0, gy_offset = 0,  gz_offset = 0; //variaveis de offset
-float mean_ax = 0,  mean_ay = 0,  mean_az = 0,  mean_gx = 0, mean_gy = 0,  mean_gz = 0;
-int acel_deadzone=8;     //Accelerometer error allowed
-int giro_deadzone=1;     //Giro error allowed
-int bufferSize=1000;     // Number of readings used to average
+// I2C device class (I2Cdev) demonstration Arduino sketch for MPU6050 class
+// 10/7/2011 by Jeff Rowberg <jeff@rowberg.net>
+// Updates should (hopefully) always be available at https://github.com/jrowberg/i2cdevlib
+//
+// Changelog:
+//      2019-07-11 - added PID offset generation at begninning Generates first offsets 
+//                 - in @ 6 seconds and completes with 4 more sets @ 10 seconds
+//                 - then continues with origional 2016 calibration code.
+//      2016-11-25 - added delays to reduce sampling rate to ~200 Hz
+//                   added temporizing printing during long computations
+//      2016-10-25 - requires inequality (Low < Target, High > Target) during expansion
+//                   dynamic speed change when closing in
+//      2016-10-22 - cosmetic changes
+//      2016-10-19 - initial release of IMU_Zero
+//      2013-05-08 - added multiple output formats
+//                 - added seamless Fastwire support
+//      2011-10-07 - initial release of MPU6050_RAW
 
-void readMPU() {
-    sensors_event_t a, g, temp;
-    mpu.getEvent(&a, &g, &temp);
+/* ============================================
+I2Cdev device library code is placed under the MIT license
+Copyright (c) 2011 Jeff Rowberg
 
-  // Using the MotionApps library
-    accX = a.acceleration.x;
-    accY = a.acceleration.y;
-    accZ = a.acceleration.z;
-    gyroX = g.gyro.x;
-    gyroY = g.gyro.y;
-    gyroZ = g.gyro.z;
-}
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-void setOffsets (float accXoff, float accYoff, float accZoff, float gyroXoff, 
-                float gyroYoff, float gyroZoff)
-{
-    ax_offset = accXoff; 
-    ay_offset = accYoff;
-    az_offset = accZoff;
-    gx_offset = gyroXoff;
-    gy_offset = gyroYoff;
-    gz_offset = gyroZoff;
-}
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-void meanSensors_() {
-  
-  long i=0,buff_ax=0,buff_ay=0,buff_az=0,buff_gx=0,buff_gy=0,buff_gz=0;
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
-  while (i<(bufferSize+101)) {
+  If an MPU6050 
+      * is an ideal member of its tribe, 
+      * is properly warmed up, 
+      * is at rest in a neutral position, 
+      * is in a location where the pull of gravity is exactly 1g, and 
+      * has been loaded with the best possible offsets, 
+then it will report 0 for all accelerations and displacements, except for 
+Z acceleration, for which it will report 16384 (that is, 2^14).  Your device 
+probably won't do quite this well, but good offsets will all get the baseline 
+outputs close to these target values.
+
+  Put the MPU6050 on a flat and horizontal surface, and leave it operating for 
+5-10 minutes so its temperature gets stabilized.
+
+  Run this program.  A "----- done -----" line will indicate that it has done its best.
+With the current accuracy-related constants (NFast = 1000, NSlow = 10000), it will take 
+a few minutes to get there.
+
+  Along the way, it will generate a dozen or so lines of output, showing that for each 
+of the 6 desired offsets, it is 
+      * first, trying to find two estimates, one too low and one too high, and
+      * then, closing in until the bracket can't be made smaller.
+
+  The line just above the "done" line will look something like
+    [567,567] --> [-1,2]  [-2223,-2223] --> [0,1] [1131,1132] --> [16374,16404] [155,156] --> [-1,1]  [-25,-24] --> [0,3] [5,6] --> [0,4]
+As will have been shown in interspersed header lines, the six groups making up this
+line describe the optimum offsets for the X acceleration, Y acceleration, Z acceleration,
+X gyro, Y gyro, and Z gyro, respectively.  In the sample shown just above, the trial showed
+that +567 was the best offset for the X acceleration, -2223 was best for Y acceleration, 
+and so on.
+
+  The need for the delay between readings (usDelay) was brought to my attention by Nikolaus Doppelhammer.
+===============================================
+*/
+
+// I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
+// for both classes must be in the include path of your project
+#include <MAIN/config.h>
+#include "I2Cdev.h"
+#include "MPU6050.h"
+
+// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
+// is used in I2Cdev.h
+#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    #include "Wire.h"
+#endif
+
+// class default I2C address is 0x68
+// specific I2C addresses may be passed as a parameter here
+// AD0 low = 0x68 (default for InvenSense evaluation board)
+// AD0 high = 0x69
+MPU6050 accelgyro;
+//MPU6050 accelgyro(0x69); // <-- use for AD0 high
+
+
+const char LBRACKET = '[';
+const char RBRACKET = ']';
+const char COMMA    = ',';
+const char BLANK    = ' ';
+const char PERIOD   = '.';
+
+const int iAx = 0;
+const int iAy = 1;
+const int iAz = 2;
+const int iGx = 3;
+const int iGy = 4;
+const int iGz = 5;
+
+const int usDelay = 3150;   // empirical, to hold sampling to 200 Hz
+const int NFast =  1000;    // the bigger, the better (but slower)
+const int NSlow = 10000;    // ..
+const int LinesBetweenHeaders = 5;
+      int LowValue[6];
+      int HighValue[6];
+      int Smoothed[6];
+      int LowOffset[6];
+      int HighOffset[6];
+      int Target[6];
+      int LinesOut;
+      int N;
+      
+void ForceHeader()
+  { LinesOut = 99; }
     
-    // read raw accel/gyro measurements from device
-    readMPU();
-    
-    if (i>100 && i<=(bufferSize+100)) { //First 100 measures are discarded
-      buff_ax=buff_ax+accX;
-      buff_ay=buff_ay+accY;
-      buff_az=buff_az+accZ;
-      buff_gx=buff_gx+gyroX;
-      buff_gy=buff_gy+gyroY;
-      buff_gz=buff_gz+gyroZ;
-    }
-    if (i==(bufferSize+100)){
-      mean_ax=buff_ax/bufferSize;
-      mean_ay=buff_ay/bufferSize;
-      mean_az=buff_az/bufferSize;
-      mean_gx=buff_gx/bufferSize;
-      mean_gy=buff_gy/bufferSize;
-      mean_gz=buff_gz/bufferSize;
-    }
-    i++;
-    delay(2); //Needed so we don't get repeated measures
-  }
-}
+void GetSmoothed()
+  { int16_t RawValue[6];
+    int i;
+    long Sums[6];
+    for (i = iAx; i <= iGz; i++)
+      { Sums[i] = 0; }
+//    unsigned long Start = micros();
 
+    for (i = 1; i <= N; i++)
+      { // get sums
+        accelgyro.getMotion6(&RawValue[iAx], &RawValue[iAy], &RawValue[iAz], 
+                             &RawValue[iGx], &RawValue[iGy], &RawValue[iGz]);
+        if ((i % 500) == 0)
+          Serial.print(PERIOD);
+        delayMicroseconds(usDelay);
+        for (int j = iAx; j <= iGz; j++)
+          Sums[j] = Sums[j] + RawValue[j];
+      } // get sums
+//    unsigned long usForN = micros() - Start;
+//    Serial.print(" reading at ");
+//    Serial.print(1000000/((usForN+N/2)/N));
+//    Serial.println(" Hz");
+    for (i = iAx; i <= iGz; i++)
+      { Smoothed[i] = (Sums[i] + N/2) / N ; }
+  } // GetSmoothed
 
-void calibrate_() {
-  ax_offset=-mean_ax/8;
-  ay_offset=-mean_ay/8;
-  az_offset=(16384-mean_az)/8;
+void Initialize()
+  {
+    // join I2C bus (I2Cdev library doesn't do this automatically)
+    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+        Wire.begin();
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+        Fastwire::setup(400, true);
+    #endif
 
-  gx_offset=-mean_gx/4;
-  gy_offset=-mean_gy/4;
-  gz_offset=-mean_gz/4;
-  while (1){
-    int ready=0;
-/*     mpu.setXAccelOffset(ax_offset);
-    mpu.setYAccelOffset(ay_offset);
-    mpu.setZAccelOffset(az_offset);
+    Serial.begin(9600);
 
-    mpu.setXGyroOffset(gx_offset);
-    mpu.setYGyroOffset(gy_offset);
-    mpu.setZGyroOffset(gz_offset); */
+    // initialize device
+    Serial.println("Initializing I2C devices...");
+    accelgyro.initialize();
 
-    // Get the mean values from the sensor  
-    meanSensors_();
+    // verify connection
+    Serial.println("Testing device connections...");
+    Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
+    Serial.println("PID tuning Each Dot = 100 readings");
+  /*A tidbit on how PID (PI actually) tuning works. 
+    When we change the offset in the MPU6050 we can get instant results. This allows us to use Proportional and 
+    integral of the PID to discover the ideal offsets. Integral is the key to discovering these offsets, Integral 
+    uses the error from set-point (set-point is zero), it takes a fraction of this error (error * ki) and adds it 
+    to the integral value. Each reading narrows the error down to the desired offset. The greater the error from 
+    set-point, the more we adjust the integral value. The proportional does its part by hiding the noise from the 
+    integral math. The Derivative is not used because of the noise and because the sensor is stationary. With the 
+    noise removed the integral value lands on a solid offset after just 600 readings. At the end of each set of 100 
+    readings, the integral value is used for the actual offsets and the last proportional reading is ignored due to 
+    the fact it reacts to any noise.
+  */
+        accelgyro.CalibrateAccel(6);
+        accelgyro.CalibrateGyro(6);
+        Serial.println("\nat 600 Readings");
+        accelgyro.PrintActiveOffsets();
+        Serial.println();
+        accelgyro.CalibrateAccel(1);
+        accelgyro.CalibrateGyro(1);
+        Serial.println("700 Total Readings");
+        accelgyro.PrintActiveOffsets();
+        Serial.println();
+        accelgyro.CalibrateAccel(1);
+        accelgyro.CalibrateGyro(1);
+        Serial.println("800 Total Readings");
+        accelgyro.PrintActiveOffsets();
+        Serial.println();
+        accelgyro.CalibrateAccel(1);
+        accelgyro.CalibrateGyro(1);
+        Serial.println("900 Total Readings");
+        accelgyro.PrintActiveOffsets();
+        Serial.println();    
+        accelgyro.CalibrateAccel(1);
+        accelgyro.CalibrateGyro(1);
+        Serial.println("1000 Total Readings");
+        accelgyro.PrintActiveOffsets();
+     Serial.println("\n\n Any of the above offsets will work nice \n\n Lets proof the PID tuning using another method:"); 
+  } // Initialize
 
-    if (abs(mean_ax)<=acel_deadzone) ready++;
-    else ax_offset=ax_offset-mean_ax/acel_deadzone;
+void SetOffsets(int TheOffsets[6])
+  { accelgyro.setXAccelOffset(TheOffsets [iAx]);
+    accelgyro.setYAccelOffset(TheOffsets [iAy]);
+    accelgyro.setZAccelOffset(TheOffsets [iAz]);
+    accelgyro.setXGyroOffset (TheOffsets [iGx]);
+    accelgyro.setYGyroOffset (TheOffsets [iGy]);
+    accelgyro.setZGyroOffset (TheOffsets [iGz]);
+  } // SetOffsets
 
-    if (abs(mean_ay)<=acel_deadzone) ready++;
-    else ay_offset=ay_offset-mean_ay/acel_deadzone;
+void ShowProgress()
+  { if (LinesOut >= LinesBetweenHeaders)
+      { // show header
+        Serial.println("\tXAccel\t\t\tYAccel\t\t\t\tZAccel\t\t\tXGyro\t\t\tYGyro\t\t\tZGyro");
+        LinesOut = 0;
+      } // show header
+    Serial.print(BLANK);
+    for (int i = iAx; i <= iGz; i++)
+      { Serial.print(LBRACKET);
+        Serial.print(LowOffset[i]),
+        Serial.print(COMMA);
+        Serial.print(HighOffset[i]);
+        Serial.print("] --> [");
+        Serial.print(LowValue[i]);
+        Serial.print(COMMA);
+        Serial.print(HighValue[i]);
+        if (i == iGz)
+          { Serial.println(RBRACKET); }
+        else
+          { Serial.print("]\t"); }
+      }
+    LinesOut++;
+  } // ShowProgress
 
-    //Padrão de retorno correto: 0 for X and Y accel, and +16384 for Z accel, por isso a subtração de 16384 no Z
-    if (abs(16384-mean_az)<=acel_deadzone) ready++;
-    else az_offset=az_offset+(16384-mean_az)/acel_deadzone;
-
-    if (abs(mean_gx)<=giro_deadzone) ready++;
-    else gx_offset=gx_offset-mean_gx/(giro_deadzone+1);
-
-    if (abs(mean_gy)<=giro_deadzone) ready++;
-    else gy_offset=gy_offset-mean_gy/(giro_deadzone+1);
-
-    if (abs(mean_gz)<=giro_deadzone) ready++;
-    else gz_offset=gz_offset-mean_gz/(giro_deadzone+1);
-
-    if (ready==6) break;
-  }
-}
-
-void loop() {
-
-    /* Get new sensor events with the readings */
-    sensors_event_t a, g, temp;
-    mpu.getEvent(&a, &g, &temp);
-
-    /* Print out the values */
-    Serial.print("Acceleration X: ");
-    Serial.print(a.acceleration.x);
-    Serial.print(", Y: ");
-    Serial.print(a.acceleration.y);
-    Serial.print(", Z: ");
-    Serial.print(a.acceleration.z);
-    Serial.println(" m/s^2");
-
-    Serial.print("Rotation X: ");
-    Serial.print(g.gyro.x);
-    Serial.print(", Y: ");
-    Serial.print(g.gyro.y);
-    Serial.print(", Z: ");
-    Serial.print(g.gyro.z);
-    Serial.println(" rad/s");
-
-    /* Print out the values - offset */
-    Serial.print("Acceleration X offset: ");
-    Serial.print(a.acceleration.x - ax_offset);
-    Serial.print(", Y: ");
-    Serial.print(a.acceleration.y - ay_offset);
-    Serial.print(", Z: ");
-    Serial.print(a.acceleration.z - az_offset);
-    Serial.println(" m/s^2");
-
-    Serial.print("Rotation X offset: ");
-    Serial.print(g.gyro.x - gx_offset);
-    Serial.print(", Y: ");
-    Serial.print(g.gyro.y- gy_offset);
-    Serial.print(", Z: ");
-    Serial.print(g.gyro.z - gz_offset);
-    Serial.println(" rad/s");
-
-    Serial.print("Temperature: ");
-    Serial.print(temp.temperature);
-    Serial.println(" degC");
-
-    Serial.println("");
-    delay(500);
-}
-
-
-
-//----------------------------------------------------//
-// Calibrate bias of the accelerometer and gyroscope
-// Sensor needs to be calibrated at each power cycle.
-//----------------------------------------------------//
-void calibrateSensor()
-{
-  // Initialize the offset values
-  setOffsets(0, 0, 0, 0, 0, 0);
+void PullBracketsIn()
+  { boolean AllBracketsNarrow;
+    boolean StillWorking;
+    int NewOffset[6];
   
-  meanSensors_();
-  delay(1000);
+    Serial.println("\nclosing in:");
+    AllBracketsNarrow = false;
+    ForceHeader();
+    StillWorking = true;
+    while (StillWorking) 
+      { StillWorking = false;
+        if (AllBracketsNarrow && (N == NFast))
+          { }//SetAveraging(NSlow); }
+        else
+          { AllBracketsNarrow = true; }// tentative
+        for (int i = iAx; i <= iGz; i++)
+          { if (HighOffset[i] <= (LowOffset[i]+1))
+              { NewOffset[i] = LowOffset[i]; }
+            else
+              { // binary search
+                StillWorking = true;
+                NewOffset[i] = (LowOffset[i] + HighOffset[i]) / 2;
+                if (HighOffset[i] > (LowOffset[i] + 10))
+                  { AllBracketsNarrow = false; }
+              } // binary search
+          }
+        SetOffsets(NewOffset);
+        GetSmoothed();
+        for (int i = iAx; i <= iGz; i++)
+          { // closing in
+            if (Smoothed[i] > Target[i])
+              { // use lower half
+                HighOffset[i] = NewOffset[i];
+                HighValue[i] = Smoothed[i];
+              } // use lower half
+            else
+              { // use upper half
+                LowOffset[i] = NewOffset[i];
+                LowValue[i] = Smoothed[i];
+              } // use upper half
+          } // closing in
+        ShowProgress();
+      } // still working
+   
+  } // PullBracketsIn
 
-  calibrate_();
-  delay(1000);
-}
+void PullBracketsOut()
+  { boolean Done = false;
+    int NextLowOffset[6];
+    int NextHighOffset[6];
 
-
-void setup(void) {
-    Serial.begin(115200);
-    while (!Serial)
-        delay(10);
-
-    Serial.println("Adafruit MPU6050 test!");
-
-    // Try to initialize!
-    if (!mpu.begin()) {
-        Serial.println("Failed to find MPU6050 chip");
-        while (1) {
-        delay(10);
-        }
-    }
-    Serial.println("MPU6050 Found!");
-
-    //? set the acelerometer range, test to get the best range
-    // mpu.setAccelerometerRange(MPU6050_RANGE_2_G);          //! acceptables values: 2G (default value), 4G, 8G, 16G 
-    // mpu.setGyroRange(MPU6050_RANGE_250_DEG);               //! acceptables values: 250; 500; 1000; 2000 (deg/s) 
-
-    mpu.setFilterBandwidth(MPU6050_BAND_10_HZ); 
+    Serial.println("expanding:");
+    ForceHeader();
  
-}
+    while (!Done)
+      { Done = true;
+        SetOffsets(LowOffset);
+        GetSmoothed();
+        for (int i = iAx; i <= iGz; i++)
+          { // got low values
+            LowValue[i] = Smoothed[i];
+            if (LowValue[i] >= Target[i])
+              { Done = false;
+                NextLowOffset[i] = LowOffset[i] - 1000;
+              }
+            else
+              { NextLowOffset[i] = LowOffset[i]; }
+          } // got low values
+      
+        SetOffsets(HighOffset);
+        GetSmoothed();
+        for (int i = iAx; i <= iGz; i++)
+          { // got high values
+            HighValue[i] = Smoothed[i];
+            if (HighValue[i] <= Target[i])
+              { Done = false;
+                NextHighOffset[i] = HighOffset[i] + 1000;
+              }
+            else
+              { NextHighOffset[i] = HighOffset[i]; }
+          } // got high values
+        ShowProgress();
+        for (int i = iAx; i <= iGz; i++)
+          { LowOffset[i] = NextLowOffset[i];   // had to wait until ShowProgress done
+            HighOffset[i] = NextHighOffset[i]; // ..
+          }
+     } // keep going
+  } // PullBracketsOut
+
+void SetAveraging(int NewN)
+  { N = NewN;
+    Serial.print("averaging ");
+    Serial.print(N);
+    Serial.println(" readings each time");
+   } // SetAveraging
+
+void setup()
+  { Initialize();
+    for (int i = iAx; i <= iGz; i++)
+      { // set targets and initial guesses
+        Target[i] = 0; // must fix for ZAccel 
+        HighOffset[i] = 0;
+        LowOffset[i] = 0;
+      } // set targets and initial guesses
+    Target[iAz] = 16384;
+    SetAveraging(NFast);
+    
+    PullBracketsOut();
+    PullBracketsIn();
+    
+    Serial.println("-------------- done --------------");
+  } // setup
+ 
+void loop()
+  {
+  } // loop
