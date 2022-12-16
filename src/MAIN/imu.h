@@ -42,7 +42,7 @@ bool imu_setup()
 // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
     Wire.begin();
-    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+    //Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
     Fastwire::setup(400, true);
 #endif
@@ -63,11 +63,11 @@ bool imu_setup()
     mpu.initialize();
 
     // verify connection
-    // Serial.println(F("Testing device connections..."));
-    // Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+    Serial.println(F("Testing device connections..."));
+    Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
     // load and configure the DMP
-    //Serial.println(F("Initializing DMP..."));
+    Serial.println(F("Initializing DMP..."));
     devStatus = mpu.dmpInitialize();
 
     // supply your own gyro offsets here, scaled for min sensitivity
@@ -84,7 +84,7 @@ bool imu_setup()
         mpu.CalibrateGyro(6);
         // mpu.PrintActiveOffsets();
         //  turn on the DMP, now that it's ready
-        //Serial.println(F("Enabling DMP..."));
+        Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
         dmpReady = true;
 
@@ -97,9 +97,9 @@ bool imu_setup()
         // 1 = initial memory load failed
         // 2 = DMP configuration updates failed
         // (if it's going to break, usually the code will be 1)
-        // Serial.print(F("DMP Initialization failed (code "));
-        // Serial.print(devStatus);
-        // Serial.println(F(")"));
+        Serial.print(F("DMP Initialization failed (code "));
+        Serial.print(devStatus);
+        Serial.println(F(")"));
     }
     return mpu.testConnection(), devStatus;
 }

@@ -35,47 +35,10 @@ ros::Publisher pubRightUltrasonic("sensor/ultrasonic/right/distance", &rightUltr
 
 // ---------- imu sensor - orientation
 std_msgs::Float32 imu_yaw; 
-sensor_msgs::Imu imu_orientation; 
 
 ros::Publisher pubIMUyaw("sensor/imu/yaw", &imu_yaw); 
-ros::Publisher pubIMUorientation("sensor/imu/orientation", &imu_orientation); 
 
 
-void imu_setupROS()
-{
-  imu_orientation.header.frame_id = "imu_link"; 
-
-  imu_orientation.orientation_covariance[0] = 0;    // orientation variance in x
-  imu_orientation.orientation_covariance[1] = 0;
-  imu_orientation.orientation_covariance[2] = 0;
-  imu_orientation.orientation_covariance[3] = 0;    
-  imu_orientation.orientation_covariance[4] = 0;    // orientation variance in y
-  imu_orientation.orientation_covariance[5] = 0;
-  imu_orientation.orientation_covariance[6] = 0;    
-  imu_orientation.orientation_covariance[7] = 0;
-  imu_orientation.orientation_covariance[8] = 0;    // orientation variance in z
-
-  imu_orientation.angular_velocity_covariance[0] = 0;   // angular velocity variance in x
-  imu_orientation.angular_velocity_covariance[1] = 0;
-  imu_orientation.angular_velocity_covariance[2] = 0;
-  imu_orientation.angular_velocity_covariance[3] = 0;
-  imu_orientation.angular_velocity_covariance[4] = 0;   // angular velocity variance in y
-  imu_orientation.angular_velocity_covariance[5] = 0;
-  imu_orientation.angular_velocity_covariance[6] = 0;
-  imu_orientation.angular_velocity_covariance[7] = 0;
-  imu_orientation.angular_velocity_covariance[8] = 0;   // angular velocity variance in z
-
-  imu_orientation.linear_acceleration_covariance[0] = 0;   // linear acceleration variance in x
-  imu_orientation.linear_acceleration_covariance[1] = 0;
-  imu_orientation.linear_acceleration_covariance[2] = 0;
-  imu_orientation.linear_acceleration_covariance[3] = 0;
-  imu_orientation.linear_acceleration_covariance[4] = 0;   // linear acceleration variance in y
-  imu_orientation.linear_acceleration_covariance[5] = 0;
-  imu_orientation.linear_acceleration_covariance[6] = 0;
-  imu_orientation.linear_acceleration_covariance[7] = 0;
-  imu_orientation.linear_acceleration_covariance[8] = 0;   // linear acceleration variance in z
-
-}
 
 void setup(){
 
@@ -85,12 +48,11 @@ void setup(){
   nh.advertise(pubMiddleUltrasonic);
   nh.advertise(pubRightUltrasonic);
   nh.advertise(pubIMUyaw);
-  nh.advertise(pubIMUorientation);
 
   pinMode(LED_BUILD_IN,OUTPUT);
   digitalWrite(LED_BUILD_IN,LOW);
 
-  // Serial.begin(9600);
+   Serial.begin(9600);
 
   previousTime = millis();
 
@@ -137,25 +99,6 @@ void loop(){
 
     imu_yaw.data = imu_get_yaw(); 
     pubIMUyaw.publish(&imu_yaw); 
-
-    float* quaternions = imu_get_quaternion(); 
-    float* linaer_acceleration = imu_get_accel(); 
-    float* angular_velocity = imu_get_gyro(); 
-
-    imu_orientation.orientation.x = quaternions[0]; 
-    imu_orientation.orientation.y = quaternions[1]; 
-    imu_orientation.orientation.z = quaternions[2];
-    imu_orientation.orientation.w = quaternions[3]; 
-
-    imu_orientation.linear_acceleration.x = linaer_acceleration[0]; 
-    imu_orientation.linear_acceleration.y = linaer_acceleration[1]; 
-    imu_orientation.linear_acceleration.z = linaer_acceleration[3]; 
-
-    imu_orientation.angular_velocity.x = angular_velocity[0]; 
-    imu_orientation.angular_velocity.y = angular_velocity[1]; 
-    imu_orientation.angular_velocity.z = angular_velocity[2]; 
-
-    pubIMUorientation.publish(&imu_orientation);
   }
 
 
