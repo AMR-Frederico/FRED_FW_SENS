@@ -1,5 +1,6 @@
 #include <MAIN/config.h>
 #include <MAIN/ultrasonic.h>
+#include "led_strip.h"
 #include <MAIN/ros_com.h>
 #include <MAIN/imu.h>
 
@@ -10,6 +11,8 @@
 
 #include "filter.h"
 //#include <MAIN/laser.h>
+
+#define cmd_led_strip_topic "cmd/led_strip/color"
 
 bool _connect = false ;
 bool imu_status, dmp_status; 
@@ -33,6 +36,8 @@ ros::Publisher pubLeftUltrasonic("sensor/ultrasonic/left/distance", &leftUltraso
 ros::Publisher pubMiddleUltrasonic("sensor/ultrasonic/middle/distance", &middleUltrasonic_distance); 
 ros::Publisher pubRightUltrasonic("sensor/ultrasonic/right/distance", &rightUltrasonic_distance); 
 
+//lights 
+ros::Subscriber<std_msgs::Float32> subLedStrip(cmd_led_strip_topic, led_strip_controler_ros );
 // ---------- imu sensor - orientation
 std_msgs::Float32 imu_yaw; 
 
@@ -43,7 +48,9 @@ ros::Publisher pubIMUyaw("sensor/imu/yaw", &imu_yaw);
 void setup(){
 
   nh.initNode(); 
+  led_strip_init();
 
+  nh.subscribe(subLedStrip);
   nh.advertise(pubLeftUltrasonic);
   nh.advertise(pubMiddleUltrasonic);
   nh.advertise(pubRightUltrasonic);
