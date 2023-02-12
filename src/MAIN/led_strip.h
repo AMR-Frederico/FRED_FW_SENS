@@ -11,6 +11,10 @@ Adafruit_NeoPixel  pixels(NUMPIXELS, LED_STRIP, NEO_GRB + NEO_KHZ800);
 int long red = 0xFF0000 ;
 int long off = 0x000000 ;
 int long blue = 0x0000FF ;
+int long green = 0x00FF00 ;
+int long magenta = 0xFF00FF ;
+int long yellow = 0xFFFF00 ;
+int long aqua = 0x00FFFF ;
 
 
 void led_strip_controler_ros(const std_msgs::Float32& msg){
