@@ -1,7 +1,7 @@
 #ifndef __CONTROLER__H__
 #define __CONTROLER__H__
 
-#include <Main/config.h>
+#include <MAIN/config.h>
 #include <std_msgs/Float32.h>
 #include <Adafruit_NeoPixel.h>
 
