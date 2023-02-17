@@ -149,6 +149,6 @@ void ros_task_code(void *pvParameters)
 }
 
 void loop(){
-  delay(100);
+  // delay(100);
 }   
 
