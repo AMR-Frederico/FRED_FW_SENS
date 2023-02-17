@@ -3,6 +3,7 @@
 #include "led_strip.h"
 #include <MAIN/ros_com.h>
 #include <MAIN/imu.h>
+#include <RTOS.h>
 
 #include <ros.h>
 #include <std_msgs/Int32.h>
@@ -24,6 +25,9 @@ float angular_velocity[3];      //x, y, z
 int ultrasonic_range[NUMBER_ULTRASONIC_SENSORS];  
 int previousTime; 
 
+TaskHandle_t UltrasonicTask;
+TaskHandle_t RosTask;
+
 //* <------------ ROS setup ---------->
 ros::NodeHandle  nh;
 
@@ -43,7 +47,8 @@ std_msgs::Float32 imu_yaw;
 
 ros::Publisher pubIMUyaw("sensor/imu/yaw", &imu_yaw); 
 
-
+void ultrasonic_task_code(void *pvParameters);
+void ros_task_code(void *pvParameters);
 
 void setup(){
 
@@ -85,31 +90,65 @@ void setup(){
     nh.logwarn("MPU6050 connection successful");
     digitalWrite(LED_BUILD_IN, HIGH); 
   }
+
+  //create a task that will be executed in the ultrasonic_task_code function, 
+  // with priority 1 and executed on core 0
+  xTaskCreatePinnedToCore(
+      ultrasonic_task_code, /* Task function. */
+      "UltrasonicTask",   /* name of task. */
+      10000,     /* Stack size of task */
+      NULL,      /* parameter of the task */
+      1,         /* priority of the task */
+      &UltrasonicTask,    /* Task handle to keep track of created task */
+      0);        /* pin task to core 0 */
+
+  //create a task that will be executed in the ros_task_code() function, 
+  // with priority 1 and executed on core 1
+  xTaskCreatePinnedToCore(
+      ros_task_code, /* Task function. */
+      "RosTask",   /* name of task. */
+      10000,     /* Stack size of task */
+      NULL,      /* parameter of the task */
+      1,         /* priority of the task */
+      &RosTask,    /* Task handle to keep track of created task */
+      1);        /* pin task to core 1 */
+
 }
 
-
-void loop(){
-
+void ultrasonic_task_code(void *pvParameters)
+{
   int* ultrasonic_range = ultrasonic_measurments(previousTime); 
   
   leftUltrasonic_distance.data = ultrasonic_range[0]; 
   middleUltrasonic_distance.data = ultrasonic_range[1];
   rightUltrasonic_distance.data = ultrasonic_range[2];
-  
-
-  pubLeftUltrasonic.publish(&leftUltrasonic_distance);
-  pubMiddleUltrasonic.publish(&middleUltrasonic_distance); 
-  pubRightUltrasonic.publish(&rightUltrasonic_distance);
 
   //! only get the sensor data if the IMU started correctly
   if (dmp_status ==0 ){
 
     imu_yaw.data = imu_get_yaw(); 
+  }
+  vTaskDelay(1);
+}
+
+void ros_task_code(void *pvParameters)
+{
+  pubLeftUltrasonic.publish(&leftUltrasonic_distance);
+  pubMiddleUltrasonic.publish(&middleUltrasonic_distance); 
+  pubRightUltrasonic.publish(&rightUltrasonic_distance);
+
+  if (dmp_status ==0 ){
+
     pubIMUyaw.publish(&imu_yaw); 
+
   }
 
-
   nh.spinOnce();
+  vTaskDelay(1);
 
-  
+}
+
+void loop(){
+  delay(100);
 }   
+
