@@ -59,11 +59,11 @@ void setup(){
   pinMode(LED_BUILD_IN,OUTPUT);
   digitalWrite(LED_BUILD_IN,LOW);
 
-   Serial.begin(9600);
+  //Serial.begin(9600);
 
   previousTime = millis();
 
-  nh.getHardware()->setBaud(57600);  
+  //nh.getHardware()->setBaud(57600);  
   
   // check that the IMU initializes correctly
   imu_status, dmp_status = imu_setup();
