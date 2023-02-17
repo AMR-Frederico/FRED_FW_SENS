@@ -12,9 +12,9 @@ int long red = 0xFF0000 ;
 int long off = 0x000000 ;
 int long blue = 0x0000FF ;
 int long green = 0x00FF00 ;
-int long magenta = 0xFF00FF ;
+int long magenta = 0xFF1493 ;
 int long yellow = 0xFFFF00 ;
-int long orange = 0xFFA500 ;
+int long orange = 0xFF4500 ;
 
 
 void led_strip_controler_ros(const std_msgs::Float32& msg){

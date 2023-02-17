@@ -17,6 +17,8 @@
 #define ECHO_3 32
 #define TRIG_3 12
 
+#define NUMBER_SENSORS 5
+
 #define READING_INTERVAL 33 
 
 

@@ -14,7 +14,6 @@
 
 #define cmd_led_strip_topic "cmd/led_strip/color"
 
-bool _connect = false ;
 bool imu_status, dmp_status; 
 
 float quaternions[4];           //x, y, z, w
