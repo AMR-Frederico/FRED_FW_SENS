@@ -1,24 +1,21 @@
 #include <Arduino.h>
-#include <ros.h>
+#include "ros.h"
 
-#include <std_msgs/Int16.h>
 #include <std_msgs/Float32.h>
 
 #include <MAIN/config.h>
+#include <MAIN/led_strip.h>
 
 // ----------> Publishers
 
-// --- ultrasonic
 #define sensor_ultrasonic_left "sensor/data/ultrasonic/left"
 #define sensor_ultrasonic_middle "sensor/data/ultrasonic/middle"
 #define sensor_ultrasonic_right "sensor/data/ultrasonic/right"
 
-// --- imu
 #define sensor_imu_yaw "sensor/data/imu/yaw"
 
 
 // ----------> Subscriber
-// --- led strip
 #define sinalization_led_strip "sensor/sinalization/led_strip"
 
 ros::NodeHandle nh; 
@@ -36,8 +33,8 @@ ros::Publisher pubUltrasonicRight(sensor_ultrasonic_right, &ultrasonicRightMsg);
 std_msgs::Float32 imuYawMsg; 
 ros::Publisher pubImuYaw(sensor_imu_yaw, &imuYawMsg);
 
-std_msgs::Float32 ledColorMsg; 
-ros::Publisher pubLedColor(sinalization_led_strip, &ledColorMsg); 
+// --------> Subscribers 
+ros::Subscriber<std_msgs::Float32> subLedColor(sinalization_led_strip, led_strip_controler_ros); 
 
 
 bool rosConnected(ros::NodeHandle  nh,bool _connect){
@@ -51,6 +48,8 @@ bool rosConnected(ros::NodeHandle  nh,bool _connect){
 
 void ros_init() {
 
+    led_strip_init();
+
     nh.initNode(); 
 
     nh.advertise(pubUltrasonicLeft); 
@@ -59,15 +58,14 @@ void ros_init() {
 
     nh.advertise(pubImuYaw); 
 
-    nh.advertise(pubLedColor); 
+    nh.subscribe(subLedColor); 
 
     nh.getHardware()->setBaud(57600);  
 
 }
 
 void ros_loop(   float ultrasonic_left,    float ultrasonic_middle, 
-                 float ultrasonic_right,   float imu_yaw, 
-                 float led_color ){
+                 float ultrasonic_right,   float imu_yaw){
     
     ultrasonicLeftMsg.data = ultrasonic_left; 
     pubUltrasonicLeft.publish(&ultrasonicLeftMsg); 
@@ -77,5 +75,8 @@ void ros_loop(   float ultrasonic_left,    float ultrasonic_middle,
 
     ultrasonicRightMsg.data = ultrasonic_right; 
     pubUltrasonicRight.publish(&ultrasonicRightMsg);
+
+    imuYawMsg.data = imu_yaw;
+    pubImuYaw.publish(&imuYawMsg); 
 
 }

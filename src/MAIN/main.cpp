@@ -33,9 +33,8 @@ float imuYaw;
 
 void setup(){
 
-  nh.initNode(); 
-  led_strip_init();
-
+  ros_init(); 
+  
   pinMode(LED_BUILD_IN,OUTPUT);
   digitalWrite(LED_BUILD_IN,LOW);
 
@@ -94,10 +93,8 @@ void sensors_task_code(void *pvParameters)
 
 void ros_task_code(void *pvParameters)
 {
-  ros_init( leftUltrasonic,    float ultrasonic_middle, 
-                 float ultrasonic_right,   float imu_yaw, 
-                 float led_color );
-
+  ros_loop(leftUltrasonic,  middleUltrasonic, 
+           rightUltrasonic, imuYaw);
   vTaskDelay(1);
 
 }
