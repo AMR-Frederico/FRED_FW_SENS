@@ -15,12 +15,17 @@ int long green = 0x00FF00 ;
 int long magenta = 0xFF1493 ;
 int long yellow = 0xFFFF00 ;
 int long orange = 0xFF4500 ;
-
+int long purple = 0x6B238E  ;
+int long white = 0xFFFFFF ;
 
 void led_strip_controler_ros(const std_msgs::Float32& msg){
     float color = msg.data;
 
-    if(color == 1){
+    if(color == 0){
+        pixels.fill(white);
+        pixels.show();
+    }
+    else if(color == 1){
         pixels.fill(blue);
         pixels.show();
     }
@@ -43,6 +48,11 @@ void led_strip_controler_ros(const std_msgs::Float32& msg){
     }
     else if (color == 6){
         pixels.fill(orange);
+        pixels.show();
+    }
+    else if (color == 7)
+    {
+        pixels.fill(purple);
         pixels.show();
     }
     else{
