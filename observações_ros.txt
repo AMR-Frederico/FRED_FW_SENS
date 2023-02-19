@@ -1,0 +1,74 @@
+/map frame (map -> odom)
+ - gps 
+ - ultrassom 
+ - laser 
+
+ /odom (odom -> base link)
+ - imu 
+
+----------------------------------------------------------------
+CONVENÇÕES ROS:
+----------------------------------------------------------------
+REP-103 (Standard Units of Measure and Coordinate Conventions)
+    - unidades: 
+    - distância -> m
+    - massa -> kg
+    - tempo -> segundos
+    - corrente -> A
+    - angulo -> radianos
+    - frequência -> Hz 
+    - força -> N
+    - potência -> W
+    - tensão -> V 
+    - temperatura -> °C
+    - magnetismo -> T 
+
+    orientação em relação ao robô:
+    - x -> frente
+    - y -> esquerda 
+    - z -> para cima 
+
+    orientação em relação a representações geográficas (east north up)
+    - x -> leste
+    - y -> norte
+    - z -> para cima
+
+REP-105 (Coordinate Frame Conventions)
+    Coordinate Frames: 
+    - base_link -> frame ligado a base móvel do robô, portanto é um frame móvel. 
+    - odom -> é world-fixed frame, é formado pelas informações contínuas de odometria, portanto é um frame de orientação preciso por um curto periodo de tempo
+    - map -> é world-fixed frame, com Z apontando para cima, usado para orientação global. 
+
+    Ordem de frames:
+    map -> odom -> base_link 
+
+    Tf: 
+    - TF entre odom e base_link é feita por uma das fonte de odometria
+    - TF entre map e base_link é feita pelo GPS, porém não diretamente, a informação  ele primeiro recebe a transformação de odom para base_link e usa essas informações para transmitir a transformação de map para odom.
+
+    ------------------------------------------------------------------
+    CONVENÇÕES ROBOT LOCALIZATION:
+    -----------------------------------------------------------------
+    frame_id: odom
+    child_frame_id: base_link
+
+    dicas -> odometry msg
+    - NÃO deve haver outras formas de tf entre odom -> base_link e map_odom
+    - cuidado com os valores de covariância, uma ideia é estima-los por meio de análise estática de covariância
+        -> Testes para ver se a orientação do robo está certa: 
+        - se o robô está se movendo no sentido anti-horário: YAW é positivo
+        - se x está se movendo para frente: X é positvo 
+
+    dicas -> imu
+    - CONFERIR ORIENTAÇÃO MPU
+    - encontrar covariância do sensor
+        -> Testes para ver se a orientação do sensor está certa: (sensor apoiado em uma superfícia, lado direito apoiado para cima "neutral right-side-up")
+        - aceleração: +9,81 m/s² (eixo z)
+        - left side up -> roll 90° e aceleração +9,81 m/s² (eixo Y)
+        - front side down -> pitch 90° e aceleração -9,81 m/s² (eixo X)
+    -> If your IMU is not placed right side up, be sure to include a transform from base_link to the IMU's frame using a static transform.
+
+
+ tf base_link -> imu_link 
+
+REP-145 (Conventions for IMU Sensor Drivers)
