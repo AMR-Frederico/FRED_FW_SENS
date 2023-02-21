@@ -52,11 +52,9 @@ void loop(){
 
   int* ultrasonic_range = ultrasonic_measurments(previousTime); 
 
-  //! only get the sensor data if the IMU started correctly
-  if (dmp_status ==0 ){
 
-    yaw = imu_get_yaw(); 
-  }
+  yaw = imu_get_yaw(); 
+  
   ros_loop(ultrasonic_range[0], ultrasonic_range[1], 
            ultrasonic_range[2], yaw);
 

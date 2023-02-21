@@ -1,5 +1,6 @@
 #include <MAIN/config.h>
 #include <Ultrasonic.h>
+#include <Arduino.h>
 
 /*
 ------------------   ------------------   ------------------

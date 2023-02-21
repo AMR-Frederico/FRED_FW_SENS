@@ -60,7 +60,7 @@ void ros_init(){
 }
 
 void ros_loop( int left_ultrasonic,   int middle_ultrasonic,
-               int right_ultrasonic,  int imu_yaw) {
+               int right_ultrasonic,  float imu_yaw) {
     
     leftUltrasonicMsg.data = left_ultrasonic; 
     pubLeftUltrasonic.publish(&leftUltrasonicMsg); 
