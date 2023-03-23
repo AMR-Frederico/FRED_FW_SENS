@@ -6,14 +6,12 @@
 
 #include "filter.h"
 
-bool imu_status, dmp_status; 
+bool _imu_connect; 
 bool _connect = false;
 
-float quaternions[4];           //x, y, z, w
-float linaer_acceleration[3];   //x, y, z
-float angular_velocity[3];      //x, y, z 
-
-float yaw = 0; 
+// float imu_orientation[4];           //x, y, z, w
+// float imu_linaerAcceleration[3];   //x, y, z
+// float imu_angularVelocity[3];      //x, y, z 
 
 int ultrasonic_range[NUMBER_ULTRASONIC_SENSORS];  
 int previousTime; 
@@ -33,10 +31,9 @@ void setup(){
   previousTime = millis();
 
   // check that the IMU initializes correctly
-  imu_status, dmp_status = imu_setup();
+  _imu_connect = imu_setup();
 
-
-  if(dmp_status == 0) {
+  if(_imu_connect == 0) {
     nh.logwarn("MPU6050 connection successful");
     digitalWrite(LED_BUILD_IN, HIGH); 
   }
@@ -51,12 +48,17 @@ void loop(){
   }
 
   int* ultrasonic_range = ultrasonic_measurments(previousTime); 
+  ros_ultrasonic(ultrasonic_range);
 
-
-  yaw = imu_get_yaw(); 
-  
-  ros_loop(ultrasonic_range[0], ultrasonic_range[1], 
-           ultrasonic_range[2], yaw);
+  float* imu_orientation = orientation(); 
+  float* imu_angularVelocity = linear_acceleration(); 
+  float* imu_linaerAcceleration = angular_velocity(); 
+  float* imu_orientationCovariance = orientation_covariance();
+  float* imu_linaerAccelerationCovariance = linear_acceleration_covariance(); 
+  float* imu_angularVelocityCovariance = angular_velocity_covariance(); 
+  ros_imu(imu_orientation, imu_orientationCovariance, 
+          imu_angularVelocity, imu_angularVelocityCovariance, 
+          imu_linaerAcceleration, imu_angularVelocityCovariance); 
 
   nh.spinOnce();
 

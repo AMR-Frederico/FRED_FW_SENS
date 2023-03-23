@@ -1,4 +1,4 @@
-#include <MAIN/config.h>
+// #include <MAIN/config.h>
 
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
 // for both classes must be in the include path of your project
@@ -37,29 +37,24 @@ float quaternion[3];
 float acceleration[3];
 float velocity[3];
 
+float orientationCovariance[9];
+float angularCovariance[9];
+float linearCovariance[9];
+
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
+
 bool imu_setup()
-{
-// join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    Wire.begin();
-    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-    Fastwire::setup(400, true);
-#endif
+{   
 
-    // Serial.begin(115200);
-    //  while (!Serial); // wait for Leonardo enumeration, others continue immediately
+    // join I2C bus (I2Cdev library doesn't do this automatically)
+    #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+        Wire.begin();
+        Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+        Fastwire::setup(400, true);
+    #endif
 
-    // // wait for ready
-    // Serial.println(F("\nSend any character to begin DMP programming and demo: "));
-    // while (Serial.available() && Serial.read()); // empty buffer
-    // while (!Serial.available());                 // wait for data
-    // while (Serial.available() && Serial.read()); // empty buffer again
-
-    // delay(5);
-
-    // initialize device
-    //Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
 
     // verify connection
@@ -82,9 +77,6 @@ bool imu_setup()
         // Calibration Time: generate offsets and calibrate our MPU6050
         mpu.CalibrateAccel(6);
         mpu.CalibrateGyro(6);
-        // mpu.PrintActiveOffsets();
-        //  turn on the DMP, now that it's ready
-        Serial.println(F("Enabling DMP..."));
         mpu.setDMPEnabled(true);
         dmpReady = true;
 
@@ -101,33 +93,10 @@ bool imu_setup()
         Serial.print(devStatus);
         Serial.println(F(")"));
     }
-    return mpu.testConnection(), devStatus;
+    return devStatus;
 }
 
-float imu_get_yaw()
-{
-
-    // read a packet from FIFO
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
-    { // Get the Latest packet
-
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
-        mpu.dmpGetGravity(&gravity, &q);
-        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-
-        //* display Euler angles in radians
-        // Serial.print("ypr\t");
-        // Serial.println(ypr[0], 5); // yaw
-        // Serial.print("\t");
-        // Serial.println(ypr[1],5);       //pitch
-        // Serial.print("\t");
-        // Serial.println(ypr[2],5);       //roll
-        // Serial.print("\t");
-    }
-    return ypr[0];
-}
-
-float *imu_get_quaternion()
+float* orientation()
 {
 
     // read a packet from FIFO
@@ -141,37 +110,128 @@ float *imu_get_quaternion()
     quaternion[2] = q.z;
     quaternion[3] = q.w;
 
+    // //* display Quaternion in radians
+    // Serial.print("quaternion angles -> \t");
+    // Serial.print("x: ");
+    // Serial.print(quaternion[0], 5);     
+    // Serial.print("\t");
+
+    // Serial.print("y: ");
+    // Serial.print(quaternion[1],5);      
+    // Serial.print("\t");
+
+    // Serial.print("z: ");
+    // Serial.print(quaternion[2],5);     
+    // Serial.print("\t");
+
+    // Serial.print("w: ");
+    // Serial.print(quaternion[3],5);       
+    // Serial.println("\t");
+
     return quaternion;
 }
 
-float *imu_get_accel()
+float* linear_acceleration()
 {
+                                   
+    mpu.dmpGetAccel(&accel, fifoBuffer);
+    
 
-    // read a packet from FIFO
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
-    {                                        // Get the Latest packet
-        mpu.dmpGetAccel(&accel, fifoBuffer); // linar acceleratio
-    }
+    // for each range of the accelerometer, we need to divide the raw value by the following values: 
+    // 2g  -> 16384.0
+    //! 4g  -> 8192.0
+    // 8g  -> 4096.0
+    // 16g -> 2048.0 
 
-    acceleration[0] = accel.x;
-    acceleration[1] = accel.y;
-    acceleration[2] = accel.z;
+    // By default, accel is in arbitrary units with a scale of 16384/1g.
+    // Per http://www.ros.org/reps/rep-0103.html
+    // and http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html
+    // should be in m/s^2.
+    // 1g = 9.80665 m/s^2, so we go arbitrary -> g -> m/s^s
 
-    return acceleration;
+    acceleration[0] = accel.x * 1/8192.0 * 9.80665;
+    acceleration[1] = accel.y * 1/8192.0 * 9.80665;
+    acceleration[2] = accel.z * 1/8192.0 * 9.80665;
+
+    //* display linear acceleration in m/s²
+    // Serial.print("linear acceleration -> \t");
+    // Serial.print("x: ");
+    // Serial.print(acceleration[0], 5);     
+    // Serial.print("\t");
+
+    // Serial.print("y: ");
+    // Serial.print(acceleration[1],5);      
+    // Serial.print("\t");
+
+    // Serial.print("z: ");
+    // Serial.print(acceleration[2],5);     
+    // Serial.println("\t");
+
+    return acceleration; 
 }
 
-float *imu_get_gyro()
+float* angular_velocity()
 {
 
-    // read a packet from FIFO
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
-    {                                      // Get the Latest packet
-        mpu.dmpGetGyro(&gyro, fifoBuffer); // angular velocity
-    }
+    mpu.dmpGetGyro(&gyro, fifoBuffer);
 
-    velocity[0] = gyro.x;
-    velocity[1] = gyro.y;
-    velocity[2] = gyro.z;
+    // for each range of the accelerometer, we need to divide the raw value by the following values: 
+    // 250°/s  -> 131.0
+    // 500°/s  -> 65.5
+    // 1000°/s -> 32.8
+    // 2000°/s -> 16.4 
+
+    velocity[0] = gyro.x * 1/16.4 * 3.141592/180 ;
+    velocity[1] = gyro.y * 1/16.4 * 3.141592/180 ;
+    velocity[2] = gyro.z * 1/16.4 * 3.141592/180 ;
+
+    //* display angular velocity in rad/s 
+    // Serial.print("angular velocity -> \t");
+        
+    // Serial.print("x: ");
+    // Serial.print(velocity[0],5);      
+    // Serial.print("\t");
+
+    // Serial.print("y: ");
+    // Serial.print(velocity[1],5);       
+    // Serial.print("\t");
+
+    // Serial.print("z: ");
+    // Serial.print(velocity[2], 5); 
+    // Serial.println("\t");
 
     return velocity;
 }
+
+float* orientation_covariance() {
+
+        for (int i = 0; i < 9; i++) {
+            orientationCovariance[i] = 0.0; 
+        }
+
+    return orientationCovariance; 
+
+}
+
+float* linear_acceleration_covariance() {
+
+
+        for (int i = 0; i < 9; i++) {
+            linearCovariance[i] = 0.0; 
+        }
+
+    return linearCovariance; 
+
+}
+
+float* angular_velocity_covariance() {
+
+        for (int i = 0; i < 9; i++) {
+            angularCovariance[i] = 0.0; 
+        }
+
+    return angularCovariance; 
+
+}
+
+
