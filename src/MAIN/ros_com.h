@@ -10,9 +10,6 @@
 #include <MAIN/config.h>
 
 // -----> PUB --------------------------------------   
-#define left_ultrasonic_topic "sensor/ultrasonic/left/distance"
-#define middle_ultrasonic_topic "sensor/ultrasonic/middle/distance"
-#define right_ultrasonic_topic "sensor/ultrasonic/right/distance"
 
 #define left_ultrasonic_range_topic "sensor/range/ultrasonic/left"
 #define right_ultrasonic_range_topic "sensor/range/ultrasonic/right"
@@ -25,14 +22,6 @@
 
 
 // ----- PUB MSG ------------------------------------
-std_msgs::Int32 leftUltrasonicMsg;
-ros::Publisher pubLeftUltrasonic(left_ultrasonic_topic, &leftUltrasonicMsg); 
-
-std_msgs::Int32 middleUltrasonicMsg; 
-ros::Publisher pubMiddleUltrasonic(middle_ultrasonic_topic, &middleUltrasonicMsg); 
-
-std_msgs::Int32 rightUltrasonicMsg; 
-ros::Publisher pubRightUltrasonic(right_ultrasonic_topic, &rightUltrasonicMsg); 
 
 sensor_msgs::Range leftUltrasonicRangeMsg;
 ros::Publisher pubLeftUltrasonicRange(left_ultrasonic_range_topic, &leftUltrasonicRangeMsg); 
@@ -67,10 +56,6 @@ void ros_init(){
 
     nh.subscribe(subLedStrip); 
 
-    nh.advertise(pubLeftUltrasonic); 
-    nh.advertise(pubMiddleUltrasonic); 
-    nh.advertise(pubRightUltrasonic);
-
     nh.advertise(pubLeftUltrasonicRange);
     nh.advertise(pubRightUltrasonicRange);
     nh.advertise(pubBackUltrasonicRange);
@@ -88,27 +73,18 @@ void ros_init(){
     rightUltrasonicRangeMsg.header.frame_id = "right_ultrasonic_link";
     rightUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
     rightUltrasonicRangeMsg.field_of_view = 0.26; 
-    rightUltrasonicRangeMsg.min_range = 0.05; 
-    rightUltrasonicRangeMsg.max_range = 3.5; 
+    rightUltrasonicRangeMsg.min_range = 5; 
+    rightUltrasonicRangeMsg.max_range = 350; 
 
     backUltrasonicRangeMsg.header.frame_id = "back_ultrasonic_link";
     backUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
     backUltrasonicRangeMsg.field_of_view = 0.26; 
-    backUltrasonicRangeMsg.min_range = 0.05; 
-    backUltrasonicRangeMsg.max_range = 3.5; 
+    backUltrasonicRangeMsg.min_range = 5; 
+    backUltrasonicRangeMsg.max_range = 350; 
 
 }
 
 void ros_ultrasonic(int *ultrasonic_range ) {
-    
-    leftUltrasonicMsg.data = ultrasonic_range[0]; 
-    pubLeftUltrasonic.publish(&leftUltrasonicMsg); 
-
-    middleUltrasonicMsg.data = ultrasonic_range[1]; 
-    pubMiddleUltrasonic.publish(&middleUltrasonicMsg); 
-
-    rightUltrasonicMsg.data = ultrasonic_range[2]; 
-    pubRightUltrasonic.publish(&rightUltrasonicMsg); 
 
     // ------------------------------------------- //
 
@@ -116,12 +92,12 @@ void ros_ultrasonic(int *ultrasonic_range ) {
     leftUltrasonicRangeMsg.range = ultrasonic_range[0];
     pubLeftUltrasonicRange.publish(&leftUltrasonicRangeMsg); 
 
-    rightUltrasonicRangeMsg.header.stamp = nh.now(); 
-    rightUltrasonicRangeMsg.range = ultrasonic_range[1];
+    backUltrasonicRangeMsg.header.stamp = nh.now(); 
+    backUltrasonicRangeMsg.range = ultrasonic_range[1];
     pubRightUltrasonicRange.publish(&rightUltrasonicRangeMsg); 
 
-    backUltrasonicRangeMsg.header.stamp = nh.now(); 
-    backUltrasonicRangeMsg.range = ultrasonic_range[2];
+    rightUltrasonicRangeMsg.header.stamp = nh.now(); 
+    rightUltrasonicRangeMsg.range = ultrasonic_range[2];
     pubBackUltrasonicRange.publish(&backUltrasonicRangeMsg); 
 
 }

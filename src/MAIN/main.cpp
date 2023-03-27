@@ -51,11 +51,12 @@ void loop(){
   ros_ultrasonic(ultrasonic_range);
 
   float* imu_orientation = orientation(); 
-  float* imu_angularVelocity = linear_acceleration(); 
-  float* imu_linaerAcceleration = angular_velocity(); 
+  float* imu_angularVelocity = angular_velocity(); 
+  float* imu_linaerAcceleration = linear_acceleration();
   float* imu_orientationCovariance = orientation_covariance();
   float* imu_linaerAccelerationCovariance = linear_acceleration_covariance(); 
   float* imu_angularVelocityCovariance = angular_velocity_covariance(); 
+  
   ros_imu(imu_orientation, imu_orientationCovariance, 
           imu_angularVelocity, imu_angularVelocityCovariance, 
           imu_linaerAcceleration, imu_angularVelocityCovariance); 
