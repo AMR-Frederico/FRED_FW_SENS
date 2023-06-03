@@ -20,6 +20,8 @@
 #ifndef Ultrasonic_h
 #define Ultrasonic_h
 
+#include <Arduino.h>
+
 /*
  * Values of divisors
  */

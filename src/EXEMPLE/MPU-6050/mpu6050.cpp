@@ -1,283 +1,210 @@
-
+#include <MAIN/config.h>
 
 // I2Cdev and MPU6050 must be installed as libraries, or else the .cpp/.h files
 // for both classes must be in the include path of your project
-#include <MAIN/config.h>
 #include "I2Cdev.h"
-#include "MPU6050.h"
 
-// Arduino Wire library is required if I2Cdev I2CDEV_ARDUINO_WIRE implementation
+#include "MPU6050_6Axis_MotionApps20.h"
+
 // is used in I2Cdev.h
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include "Wire.h"
+#include "Wire.h"
 #endif
 
-// class default I2C address is 0x68
-// specific I2C addresses may be passed as a parameter here
-// AD0 low = 0x68 (default for InvenSense evaluation board)
-// AD0 high = 0x69
-MPU6050 accelgyro;
-//MPU6050 accelgyro(0x69); // <-- use for AD0 high
+MPU6050 mpu;
 
+// define output readings
+#define OUTPUT_READABLE_QUATERNION   // quaternion is the standart for imu readings
+#define OUTPUT_READABLE_YAWPITCHROLL // get yaw is enought for odometry
 
-const char LBRACKET = '[';
-const char RBRACKET = ']';
-const char COMMA    = ',';
-const char BLANK    = ' ';
-const char PERIOD   = '.';
+// MPU control/status vars
+bool dmpReady = false;  // set true if DMP init was successful
+uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
+uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
+uint16_t fifoCount;     // count of all bytes currently in FIFO
+uint8_t fifoBuffer[64]; // FIFO storage buffer
 
-const int iAx = 0;
-const int iAy = 1;
-const int iAz = 2;
-const int iGx = 3;
-const int iGy = 4;
-const int iGz = 5;
+// orientation/motion vars
+Quaternion q;        // [w, x, y, z]         quaternion container
+VectorInt16 accel;   // [x, y, z]            accel sensor measurements
+VectorInt16 gyro;    // [x, y, z]            gyro sensor measurements
+VectorInt16 aaReal;  // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld; // [x, y, z]            world-frame accel sensor measurements
+VectorFloat gravity; // [x, y, z]            gravity vector
+float euler[3];      // [psi, theta, phi]    Euler angle container
+float ypr[3];        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector        // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
+float quaternion[3];
+float acceleration[3];
+float velocity[3];
 
-const int usDelay = 3150;   // empirical, to hold sampling to 200 Hz
-const int NFast =  1000;    // the bigger, the better (but slower)
-const int NSlow = 10000;    // ..
-const int LinesBetweenHeaders = 5;
-      int LowValue[6];
-      int HighValue[6];
-      int Smoothed[6];
-      int LowOffset[6];
-      int HighOffset[6];
-      int Target[6];
-      int LinesOut;
-      int N;
-      
-void ForceHeader()
-  { LinesOut = 99; }
-    
-void GetSmoothed()
-  { int16_t RawValue[6];
-    int i;
-    long Sums[6];
-    for (i = iAx; i <= iGz; i++)
-      { Sums[i] = 0; }
-//    unsigned long Start = micros();
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
 
-    for (i = 1; i <= N; i++)
-      { // get sums
-        accelgyro.getMotion6(&RawValue[iAx], &RawValue[iAy], &RawValue[iAz], 
-                             &RawValue[iGx], &RawValue[iGy], &RawValue[iGz]);
-        if ((i % 500) == 0)
-          Serial.print(PERIOD);
-        delayMicroseconds(usDelay);
-        for (int j = iAx; j <= iGz; j++)
-          Sums[j] = Sums[j] + RawValue[j];
-      } // get sums
-//    unsigned long usForN = micros() - Start;
-//    Serial.print(" reading at ");
-//    Serial.print(1000000/((usForN+N/2)/N));
-//    Serial.println(" Hz");
-    for (i = iAx; i <= iGz; i++)
-      { Smoothed[i] = (Sums[i] + N/2) / N ; }
-  } // GetSmoothed
+void setup()
+{   
+    Serial.begin(9600);
 
-void Initialize()
-  {
     // join I2C bus (I2Cdev library doesn't do this automatically)
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
+        Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
     #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
         Fastwire::setup(400, true);
     #endif
 
-    Serial.begin(9600);
-
-    // initialize device
-    Serial.println("Initializing I2C devices...");
-    accelgyro.initialize();
+    mpu.initialize();
 
     // verify connection
-    Serial.println("Testing device connections...");
-    Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
-    Serial.println("PID tuning Each Dot = 100 readings");
-  /*A tidbit on how PID (PI actually) tuning works. 
-    When we change the offset in the MPU6050 we can get instant results. This allows us to use Proportional and 
-    integral of the PID to discover the ideal offsets. Integral is the key to discovering these offsets, Integral 
-    uses the error from set-point (set-point is zero), it takes a fraction of this error (error * ki) and adds it 
-    to the integral value. Each reading narrows the error down to the desired offset. The greater the error from 
-    set-point, the more we adjust the integral value. The proportional does its part by hiding the noise from the 
-    integral math. The Derivative is not used because of the noise and because the sensor is stationary. With the 
-    noise removed the integral value lands on a solid offset after just 600 readings. At the end of each set of 100 
-    readings, the integral value is used for the actual offsets and the last proportional reading is ignored due to 
-    the fact it reacts to any noise.
-  */
-        accelgyro.CalibrateAccel(6);
-        accelgyro.CalibrateGyro(6);
-        Serial.println("\nat 600 Readings");
-        accelgyro.PrintActiveOffsets();
-        Serial.println();
-        accelgyro.CalibrateAccel(1);
-        accelgyro.CalibrateGyro(1);
-        Serial.println("700 Total Readings");
-        accelgyro.PrintActiveOffsets();
-        Serial.println();
-        accelgyro.CalibrateAccel(1);
-        accelgyro.CalibrateGyro(1);
-        Serial.println("800 Total Readings");
-        accelgyro.PrintActiveOffsets();
-        Serial.println();
-        accelgyro.CalibrateAccel(1);
-        accelgyro.CalibrateGyro(1);
-        Serial.println("900 Total Readings");
-        accelgyro.PrintActiveOffsets();
-        Serial.println();    
-        accelgyro.CalibrateAccel(1);
-        accelgyro.CalibrateGyro(1);
-        Serial.println("1000 Total Readings");
-        accelgyro.PrintActiveOffsets();
-     Serial.println("\n\n Any of the above offsets will work nice \n\n Lets proof the PID tuning using another method:"); 
-  } // Initialize
+    Serial.println(F("Testing device connections..."));
+    Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
 
-void SetOffsets(int TheOffsets[6])
-  { accelgyro.setXAccelOffset(TheOffsets [iAx]);
-    accelgyro.setYAccelOffset(TheOffsets [iAy]);
-    accelgyro.setZAccelOffset(TheOffsets [iAz]);
-    accelgyro.setXGyroOffset (TheOffsets [iGx]);
-    accelgyro.setYGyroOffset (TheOffsets [iGy]);
-    accelgyro.setZGyroOffset (TheOffsets [iGz]);
-  } // SetOffsets
+    // load and configure the DMP
+    Serial.println(F("Initializing DMP..."));
+    devStatus = mpu.dmpInitialize();
 
-void ShowProgress()
-  { if (LinesOut >= LinesBetweenHeaders)
-      { // show header
-        Serial.println("\tXAccel\t\t\tYAccel\t\t\t\tZAccel\t\t\tXGyro\t\t\tYGyro\t\t\tZGyro");
-        LinesOut = 0;
-      } // show header
-    Serial.print(BLANK);
-    for (int i = iAx; i <= iGz; i++)
-      { Serial.print(LBRACKET);
-        Serial.print(LowOffset[i]),
-        Serial.print(COMMA);
-        Serial.print(HighOffset[i]);
-        Serial.print("] --> [");
-        Serial.print(LowValue[i]);
-        Serial.print(COMMA);
-        Serial.print(HighValue[i]);
-        if (i == iGz)
-          { Serial.println(RBRACKET); }
-        else
-          { Serial.print("]\t"); }
-      }
-    LinesOut++;
-  } // ShowProgress
+    // supply your own gyro offsets here, scaled for min sensitivity
+    mpu.setXGyroOffset(220);
+    mpu.setYGyroOffset(76);
+    mpu.setZGyroOffset(-85);
+    mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
 
-void PullBracketsIn()
-  { boolean AllBracketsNarrow;
-    boolean StillWorking;
-    int NewOffset[6];
-  
-    Serial.println("\nclosing in:");
-    AllBracketsNarrow = false;
-    ForceHeader();
-    StillWorking = true;
-    while (StillWorking) 
-      { StillWorking = false;
-        if (AllBracketsNarrow && (N == NFast))
-          { }//SetAveraging(NSlow); }
-        else
-          { AllBracketsNarrow = true; }// tentative
-        for (int i = iAx; i <= iGz; i++)
-          { if (HighOffset[i] <= (LowOffset[i]+1))
-              { NewOffset[i] = LowOffset[i]; }
-            else
-              { // binary search
-                StillWorking = true;
-                NewOffset[i] = (LowOffset[i] + HighOffset[i]) / 2;
-                if (HighOffset[i] > (LowOffset[i] + 10))
-                  { AllBracketsNarrow = false; }
-              } // binary search
-          }
-        SetOffsets(NewOffset);
-        GetSmoothed();
-        for (int i = iAx; i <= iGz; i++)
-          { // closing in
-            if (Smoothed[i] > Target[i])
-              { // use lower half
-                HighOffset[i] = NewOffset[i];
-                HighValue[i] = Smoothed[i];
-              } // use lower half
-            else
-              { // use upper half
-                LowOffset[i] = NewOffset[i];
-                LowValue[i] = Smoothed[i];
-              } // use upper half
-          } // closing in
-        ShowProgress();
-      } // still working
-   
-  } // PullBracketsIn
+    // make sure it worked (returns 0 if so)
+    if (devStatus == 0)
+    {
+        // Calibration Time: generate offsets and calibrate our MPU6050
+        mpu.CalibrateAccel(6);
+        mpu.CalibrateGyro(6);
+        mpu.setDMPEnabled(true);
+        dmpReady = true;
 
-void PullBracketsOut()
-  { boolean Done = false;
-    int NextLowOffset[6];
-    int NextHighOffset[6];
+        // get expected DMP packet size for later comparison
+        packetSize = mpu.dmpGetFIFOPacketSize();
+    }
+    else
+    {
+        // ERROR!
+        // 1 = initial memory load failed
+        // 2 = DMP configuration updates failed
+        // (if it's going to break, usually the code will be 1)
+        Serial.print(F("DMP Initialization failed (code "));
+        Serial.print(devStatus);
+        Serial.println(F(")"));
+    }
+}
 
-    Serial.println("expanding:");
-    ForceHeader();
- 
-    while (!Done)
-      { Done = true;
-        SetOffsets(LowOffset);
-        GetSmoothed();
-        for (int i = iAx; i <= iGz; i++)
-          { // got low values
-            LowValue[i] = Smoothed[i];
-            if (LowValue[i] >= Target[i])
-              { Done = false;
-                NextLowOffset[i] = LowOffset[i] - 1000;
-              }
-            else
-              { NextLowOffset[i] = LowOffset[i]; }
-          } // got low values
-      
-        SetOffsets(HighOffset);
-        GetSmoothed();
-        for (int i = iAx; i <= iGz; i++)
-          { // got high values
-            HighValue[i] = Smoothed[i];
-            if (HighValue[i] <= Target[i])
-              { Done = false;
-                NextHighOffset[i] = HighOffset[i] + 1000;
-              }
-            else
-              { NextHighOffset[i] = HighOffset[i]; }
-          } // got high values
-        ShowProgress();
-        for (int i = iAx; i <= iGz; i++)
-          { LowOffset[i] = NextLowOffset[i];   // had to wait until ShowProgress done
-            HighOffset[i] = NextHighOffset[i]; // ..
-          }
-     } // keep going
-  } // PullBracketsOut
+void quaternion_angle()
+{
 
-void SetAveraging(int NewN)
-  { N = NewN;
-    Serial.print("averaging ");
-    Serial.print(N);
-    Serial.println(" readings each time");
-   } // SetAveraging
+    // read a packet from FIFO
+    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
+    {                                         // Get the Latest packet
+        mpu.dmpGetQuaternion(&q, fifoBuffer); // quaternion
+    }
 
-void setup()
-  { Initialize();
-    for (int i = iAx; i <= iGz; i++)
-      { // set targets and initial guesses
-        Target[i] = 0; // must fix for ZAccel 
-        HighOffset[i] = 0;
-        LowOffset[i] = 0;
-      } // set targets and initial guesses
-    Target[iAz] = 16384;
-    SetAveraging(NFast);
-    
-    PullBracketsOut();
-    PullBracketsIn();
-    
-    Serial.println("-------------- done --------------");
-  } // setup
- 
+    quaternion[0] = q.x;
+    quaternion[1] = q.y;
+    quaternion[2] = q.z;
+    quaternion[3] = q.w;
+
+    //* display Quaternion in radians
+    Serial.print("quaternion angles -> \t");
+    Serial.print("x: ");
+    Serial.print(quaternion[0], 5);     
+    Serial.print("\t");
+
+    Serial.print("y: ");
+    Serial.print(quaternion[1],5);      
+    Serial.print("\t");
+
+    Serial.print("z: ");
+    Serial.print(quaternion[2],5);     
+    Serial.print("\t");
+
+    Serial.print("w: ");
+    Serial.print(quaternion[3],5);       
+    Serial.println("\t");
+
+}
+
+void linear_acceleration()
+{
+
+    // read a packet from FIFO
+    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
+    {                                        
+        mpu.dmpGetAccel(&accel, fifoBuffer);
+    }
+
+    // for each range of the accelerometer, we need to divide the raw value by the following values: 
+    // 2g  -> 16384.0
+    //! 4g  -> 8192.0
+    // 8g  -> 4096.0
+    // 16g -> 2048.0 
+
+    // By default, accel is in arbitrary units with a scale of 16384/1g.
+    // Per http://www.ros.org/reps/rep-0103.html
+    // and http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html
+    // should be in m/s^2.
+    // 1g = 9.80665 m/s^2, so we go arbitrary -> g -> m/s^s
+
+    acceleration[0] = accel.x * 1/8192.0 * 9.80665;
+    acceleration[1] = accel.y * 1/8192.0 * 9.80665;
+    acceleration[2] = accel.z * 1/8192.0 * 9.80665;
+
+    //* display linear acceleration in m/s²
+    Serial.print("linear acceleration -> \t");
+    Serial.print("x: ");
+    Serial.print(acceleration[0], 5);     
+    Serial.print("\t");
+
+    Serial.print("y: ");
+    Serial.print(acceleration[1],5);      
+    Serial.print("\t");
+
+    Serial.print("z: ");
+    Serial.print(acceleration[2],5);     
+    Serial.println("\t");
+}
+
+void angular_velocity()
+{
+    // read a packet from FIFO
+    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer))
+    { // Get the Latest packet
+
+        mpu.dmpGetGyro(&gyro, fifoBuffer);
+    }
+
+    // for each range of the accelerometer, we need to divide the raw value by the following values: 
+    // 250°/s  -> 131.0
+    // 500°/s  -> 65.5
+    // 1000°/s -> 32.8
+    // 2000°/s -> 16.4 
+
+    velocity[0] = gyro.x * 1/16.4 * 3.141592/180 ;
+    velocity[1] = gyro.y * 1/16.4 * 3.141592/180 ;
+    velocity[2] = gyro.z * 1/16.4 * 3.141592/180 ;
+
+    //* display angular velocity in rad/s 
+    Serial.print("angular velocity -> \t");
+        
+    Serial.print("x: ");
+    Serial.print(velocity[0],5);      
+    Serial.print("\t");
+
+    Serial.print("y: ");
+    Serial.print(velocity[1],5);       
+    Serial.print("\t");
+
+    Serial.print("z: ");
+    Serial.print(velocity[2], 5); 
+    Serial.println("\t");
+
+}
+
 void loop()
-  {
-  } // loop
+{
+    // quaternion_angle();
+    // linear_acceleration();  
+     angular_velocity();
+}
