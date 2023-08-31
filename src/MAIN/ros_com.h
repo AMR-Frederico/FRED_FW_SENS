@@ -8,6 +8,7 @@
 
 #include <Arduino.h>
 #include <MAIN/config.h>
+#include <MAIN/led_strip.h>
 
 // -----> PUB --------------------------------------   
 
