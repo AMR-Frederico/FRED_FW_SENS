@@ -23,13 +23,16 @@
 
 // ----- PUB MSG ------------------------------------
 
-sensor_msgs::Range leftUltrasonicRangeMsg;
+// sensor_msgs::Range leftUltrasonicRangeMsg;
+std_msgs::Float32 leftUltrasonicRangeMsg;
 ros::Publisher pubLeftUltrasonicRange(left_ultrasonic_range_topic, &leftUltrasonicRangeMsg); 
 
-sensor_msgs::Range rightUltrasonicRangeMsg;
+// sensor_msgs::Range rightUltrasonicRangeMsg;
+std_msgs::Float32 rightUltrasonicRangeMsg;
 ros::Publisher pubRightUltrasonicRange(right_ultrasonic_range_topic, &rightUltrasonicRangeMsg); 
 
-sensor_msgs::Range backUltrasonicRangeMsg;
+// sensor_msgs::Range backUltrasonicRangeMsg;
+std_msgs::Float32 backUltrasonicRangeMsg;
 ros::Publisher pubBackUltrasonicRange(back_ultrasonic_range_topic, &backUltrasonicRangeMsg); 
 
 sensor_msgs::Imu imuMsg; 
@@ -64,23 +67,23 @@ void ros_init(){
 
     // -------------------------------------------------------------//
 
-    leftUltrasonicRangeMsg.header.frame_id = "left_ultrasonic_link";
-    leftUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
-    leftUltrasonicRangeMsg.field_of_view = 0.26; 
-    leftUltrasonicRangeMsg.min_range = 0.05; 
-    leftUltrasonicRangeMsg.max_range = 3.5; 
+    // leftUltrasonicRangeMsg.header.frame_id = "left_ultrasonic_link";
+    // leftUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
+    // leftUltrasonicRangeMsg.field_of_view = 0.26; 
+    // leftUltrasonicRangeMsg.min_range = 5; 
+    // leftUltrasonicRangeMsg.max_range = 350; 
 
-    rightUltrasonicRangeMsg.header.frame_id = "right_ultrasonic_link";
-    rightUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
-    rightUltrasonicRangeMsg.field_of_view = 0.26; 
-    rightUltrasonicRangeMsg.min_range = 5; 
-    rightUltrasonicRangeMsg.max_range = 350; 
+    // rightUltrasonicRangeMsg.header.frame_id = "right_ultrasonic_link";
+    // rightUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
+    // rightUltrasonicRangeMsg.field_of_view = 0.26; 
+    // rightUltrasonicRangeMsg.min_range = 5; 
+    // rightUltrasonicRangeMsg.max_range = 350; 
 
-    backUltrasonicRangeMsg.header.frame_id = "back_ultrasonic_link";
-    backUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
-    backUltrasonicRangeMsg.field_of_view = 0.26; 
-    backUltrasonicRangeMsg.min_range = 5; 
-    backUltrasonicRangeMsg.max_range = 350; 
+    // backUltrasonicRangeMsg.header.frame_id = "back_ultrasonic_link";
+    // backUltrasonicRangeMsg.radiation_type = sensor_msgs::Range::ULTRASOUND; 
+    // backUltrasonicRangeMsg.field_of_view = 0.26; 
+    // backUltrasonicRangeMsg.min_range = 5; 
+    // backUltrasonicRangeMsg.max_range = 350; 
 
 }
 
@@ -88,16 +91,19 @@ void ros_ultrasonic(int *ultrasonic_range ) {
 
     // ------------------------------------------- //
 
-    leftUltrasonicRangeMsg.header.stamp = nh.now(); 
-    leftUltrasonicRangeMsg.range = ultrasonic_range[0];
+    // leftUltrasonicRangeMsg.header.stamp = nh.now(); 
+    // leftUltrasonicRangeMsg.range = ultrasonic_range[0];
+    leftUltrasonicRangeMsg.data = ultrasonic_range[0];
     pubLeftUltrasonicRange.publish(&leftUltrasonicRangeMsg); 
 
-    backUltrasonicRangeMsg.header.stamp = nh.now(); 
-    backUltrasonicRangeMsg.range = ultrasonic_range[1];
+    // backUltrasonicRangeMsg.header.stamp = nh.now(); 
+    // backUltrasonicRangeMsg.range = ultrasonic_range[1];
+    backUltrasonicRangeMsg.data = ultrasonic_range[1];
     pubRightUltrasonicRange.publish(&rightUltrasonicRangeMsg); 
 
-    rightUltrasonicRangeMsg.header.stamp = nh.now(); 
-    rightUltrasonicRangeMsg.range = ultrasonic_range[2];
+    // rightUltrasonicRangeMsg.header.stamp = nh.now(); 
+    // rightUltrasonicRangeMsg.range = ultrasonic_range[2];
+    rightUltrasonicRangeMsg.data = ultrasonic_range[2];
     pubBackUltrasonicRange.publish(&backUltrasonicRangeMsg); 
 
 }
