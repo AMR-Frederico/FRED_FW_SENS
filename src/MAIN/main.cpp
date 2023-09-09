@@ -2,6 +2,8 @@
 #include <MAIN/ultrasonic.h>
 #include "led_strip.h"
 #include <MAIN/ros_com.h>
+#include <movingAvg.h>
+
 #include <MAIN/imu.h>
 
 #include "filter.h"
@@ -14,6 +16,9 @@ float linaer_acceleration[3];   //x, y, z
 float angular_velocity[3];      //x, y, z 
 
 float yaw = 0; 
+movingAvg avgYaw(10);                  // define the moving average object
+MedianFilter MedianYaw(10, 0);
+int avg_yaw, median_yaw;
 
 int ultrasonic_range[NUMBER_ULTRASONIC_SENSORS];  
 int previousTime; 
@@ -24,6 +29,8 @@ void setup(){
 
   led_strip_init();
   ros_init();
+
+  avgYaw.begin();
 
   pinMode(LED_BUILD_IN,OUTPUT);
   digitalWrite(LED_BUILD_IN,LOW);
@@ -54,9 +61,13 @@ void loop(){
 
 
   yaw = imu_get_yaw(); 
+  MedianYaw.in(yaw);
+  avg_yaw = avgYaw.reading(yaw);
+  median_yaw = MedianYaw.out();
+  
   
   ros_loop(ultrasonic_range[0], ultrasonic_range[1], 
-           ultrasonic_range[2], yaw);
+           ultrasonic_range[2], median_yaw);
 
   nh.spinOnce();
 

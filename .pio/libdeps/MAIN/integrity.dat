@@ -1,3 +1,4 @@
-adafruit/Adafruit_VL53L0X@^1.2.1
-ericksimoes/Ultrasonic@^3.0.0
 adafruit/Adafruit NeoPixel@^1.10.6
+jchristensen/movingAvg@^2.3.1
+ericksimoes/Ultrasonic@^3.0.0
+adafruit/Adafruit_VL53L0X@^1.2.1
